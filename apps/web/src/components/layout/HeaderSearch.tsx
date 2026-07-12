@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react"
 import type { KeyboardEvent as ReactKeyboardEvent } from "react"
 import { Search, X } from "lucide-react"
 import { searchMulti } from "@/lib/api/media"
-import type { Media } from "@/lib/api/types"
+import {getTypeLabel, Media} from "@/lib/api/types"
 import styles from "./HeaderSearch.module.css"
 
 const SEARCH_DELAY_MS = 350
@@ -19,8 +19,6 @@ const formatDate = (date?: Date) => date?.toLocaleDateString("ru-RU", {
     month: "short",
     year: "numeric",
 })
-
-const getTypeLabel = (type: Media["type"]) => type === "tv" ? "Сериал" : "Фильм"
 
 const getRatingClassName = (voteAverage: number) => {
     if (voteAverage >= 7) return styles.ratingGood

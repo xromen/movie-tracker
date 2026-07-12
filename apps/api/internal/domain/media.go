@@ -8,6 +8,7 @@ type Media struct {
 	PosterPath  string
 	VoteAverage float32
 	VoteCount   int64
+	WatchStatus WatchStatus
 	Type        MediaType
 }
 

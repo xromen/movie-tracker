@@ -264,7 +264,7 @@ func setupRouter(
 	protected.Use(handler.AuthMiddleware(jwtManager, userService, nil))
 
 	{
-		unprotectedMovies := v1.Group("/movie")
+		unprotectedMovies := v1.Group("/movie", handler.OptionalAuthMiddleware(jwtManager, userService))
 		{
 			unprotectedMovies.GET("/:id", movieHandler.GetMovieDetail)
 			unprotectedMovies.GET("/:id/recommendations", movieHandler.GetMovieRecommendations)
@@ -283,10 +283,10 @@ func setupRouter(
 	}
 
 	{
-		unprotectedTVShows := v1.Group("/tv")
+		unprotectedTVShows := v1.Group("/tv", handler.OptionalAuthMiddleware(jwtManager, userService))
 		{
 			unprotectedTVShows.GET("/:id", tvShowHandler.GetTVShowDetail)
-			unprotectedTVShows.GET("/:id/season/:season_number", handler.OptionalAuthMiddleware(jwtManager), tvShowHandler.GetSeasonEpisodes)
+			unprotectedTVShows.GET("/:id/season/:season_number", tvShowHandler.GetSeasonEpisodes)
 			unprotectedTVShows.GET("/:id/recommendations", tvShowHandler.GetRecommendations)
 			unprotectedTVShows.GET("/search", tvShowHandler.Search)
 			unprotectedTVShows.GET("/airing-today", tvShowHandler.GetAiringToday)

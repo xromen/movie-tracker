@@ -23,7 +23,7 @@ interface ApiMedia {
     poster_path?: string
     vote_average: number
     vote_count?: number
-    user_status?: WatchStatus
+    watch_status?: WatchStatus
     type?: MediaType
 }
 
@@ -122,7 +122,7 @@ export const mapMedia = (media: ApiMedia, type?: MediaType): Media => ({
     posterPath: media.poster_path,
     voteAverage: media.vote_average,
     voteCount: media.vote_count ?? 0,
-    watchStatus: media.user_status,
+    watchStatus: media.watch_status,
     type: (media.type ?? type) as MediaType,
 })
 
@@ -272,6 +272,8 @@ export const getWatchList = async ({
     }
 
     const data = await fetchApi<ApiWatchListResponse>(`/v1/watch-list?${params.toString()}`)
+
+    console.log(data)
 
     return {
         results: data.medias.flatMap((item): Media[] => {

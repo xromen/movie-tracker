@@ -19,6 +19,7 @@ type movieResponse struct {
 	Popularity  float32 `json:"popularity"`
 	VoteAverage float32 `json:"vote_average"`
 	VoteCount   int64   `json:"vote_count"`
+	WatchStatus string  `json:"watch_status,omitempty"`
 }
 
 type searchResponse struct {
@@ -93,9 +94,15 @@ func (h *MovieHandler) Search(c *gin.Context) {
 }
 
 func (h *MovieHandler) NowPlaying(c *gin.Context) {
+	var userID *int64
+	if id, exists := c.Get(ContextUserID); exists {
+		if v, ok := id.(int64); ok {
+			userID = &v
+		}
+	}
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 
-	result, err := h.movieService.GetNowPlaying(c.Request.Context(), page)
+	result, err := h.movieService.GetNowPlaying(c.Request.Context(), userID, page)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
@@ -105,9 +112,15 @@ func (h *MovieHandler) NowPlaying(c *gin.Context) {
 }
 
 func (h *MovieHandler) Popular(c *gin.Context) {
+	var userID *int64
+	if id, exists := c.Get(ContextUserID); exists {
+		if v, ok := id.(int64); ok {
+			userID = &v
+		}
+	}
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 
-	result, err := h.movieService.GetPopular(c.Request.Context(), page)
+	result, err := h.movieService.GetPopular(c.Request.Context(), userID, page)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
@@ -117,9 +130,15 @@ func (h *MovieHandler) Popular(c *gin.Context) {
 }
 
 func (h *MovieHandler) TopRated(c *gin.Context) {
+	var userID *int64
+	if id, exists := c.Get(ContextUserID); exists {
+		if v, ok := id.(int64); ok {
+			userID = &v
+		}
+	}
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 
-	result, err := h.movieService.GetTopRated(c.Request.Context(), page)
+	result, err := h.movieService.GetTopRated(c.Request.Context(), userID, page)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
@@ -129,9 +148,15 @@ func (h *MovieHandler) TopRated(c *gin.Context) {
 }
 
 func (h *MovieHandler) Upcoming(c *gin.Context) {
+	var userID *int64
+	if id, exists := c.Get(ContextUserID); exists {
+		if v, ok := id.(int64); ok {
+			userID = &v
+		}
+	}
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 
-	result, err := h.movieService.GetUpcoming(c.Request.Context(), page)
+	result, err := h.movieService.GetUpcoming(c.Request.Context(), userID, page)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
@@ -153,10 +178,16 @@ func (h *MovieHandler) GetMovieDetail(c *gin.Context) {
 }
 
 func (h *MovieHandler) GetMovieRecommendations(c *gin.Context) {
+	var userID *int64
+	if id, exists := c.Get(ContextUserID); exists {
+		if v, ok := id.(int64); ok {
+			userID = &v
+		}
+	}
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 
-	result, err := h.movieService.GetRecommendations(c.Request.Context(), id, page)
+	result, err := h.movieService.GetRecommendations(c.Request.Context(), userID, id, page)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
@@ -186,6 +217,7 @@ func toMovieResponse(movie domain.Media) movieResponse {
 		ReleaseDate: movie.ReleaseDate,
 		VoteAverage: movie.VoteAverage,
 		VoteCount:   movie.VoteCount,
+		WatchStatus: string(movie.WatchStatus),
 	}
 }
 

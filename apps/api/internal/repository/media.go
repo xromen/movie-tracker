@@ -15,11 +15,11 @@ type MediaRepository interface {
 	GetByTmdbID(ctx context.Context, tmdbID int64) (*domain.Media, error)
 	GetUserList(ctx context.Context, userID int64, status domain.WatchStatus, mediaType domain.MediaType, page, perPage int) ([]domain.UserMedia, int, error)
 	GetMediaUserStatus(ctx context.Context, userID, mediaID int64) (*domain.WatchStatus, error)
+	GetMediaUserStatuses(ctx context.Context, userID int64, mediaIDs []int64) (map[int64]domain.WatchStatus, error)
 	DeleteUserStatus(ctx context.Context, userID, mediaID int64) (*domain.UserMedia, error)
 	SetMediaUserStatus(ctx context.Context, userID int64, media *domain.UserMedia) error
 	GetWatchedEpisodeNumbers(ctx context.Context, userID, tvShowID int64, seasonNumber int) ([]int, error)
 	SetEpisodeWatched(ctx context.Context, userID, tvShowID int64, seasonNumber, episodeNumber int, watched bool) error
-
 	MarkSeasonWatched(ctx context.Context, userID, tvShowID int64, seasonNumber int, episodeNumbers []int32) error
 	UnmarkSeasonWatched(ctx context.Context, userID, tvShowID int64, seasonNumber int) error
 }
@@ -206,6 +206,42 @@ func (r *mediaRepository) GetMediaUserStatus(ctx context.Context, userID, mediaI
 	}
 
 	return &watchStatus, nil
+}
+
+func (r *mediaRepository) GetMediaUserStatuses(ctx context.Context, userID int64, mediaIDs []int64) (map[int64]domain.WatchStatus, error) {
+	query := `
+		SELECT media_id, status
+		FROM user_medias
+		WHERE user_id = $1
+		  AND media_id = ANY($2)
+	`
+
+	rows, err := r.pool.Query(ctx, query, userID, mediaIDs)
+	if err != nil {
+		return nil, fmt.Errorf("get user media statuses: %w", err)
+	}
+
+	defer rows.Close()
+
+	var statuses = map[int64]domain.WatchStatus{}
+
+	for rows.Next() {
+		var mediaID int64
+		var status string
+
+		err := rows.Scan(&mediaID, &status)
+		if err != nil {
+			return nil, fmt.Errorf("scan user media statuses: %w", err)
+		}
+
+		statuses[mediaID] = domain.WatchStatus(status)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate user media statuses: %w", err)
+	}
+
+	return statuses, nil
 }
 
 func (r *mediaRepository) DeleteUserStatus(ctx context.Context, userID, mediaID int64) (*domain.UserMedia, error) {

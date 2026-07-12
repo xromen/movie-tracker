@@ -27,6 +27,8 @@ export interface Video {
 
 export type MediaType = "movie" | "tv"
 
+export const getTypeLabel = (type: MediaType) => type === "tv" ? "Сериал" : "Фильм"
+
 export interface Media {
     id: number
     title: string

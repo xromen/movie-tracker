@@ -52,7 +52,6 @@ const LoginForm = () => {
 
       <form onSubmit={handleSubmit} className={styles.form} aria-describedby={error ? LOGIN_ERROR_ID : undefined}>
         <div className={styles.field}>
-          <label className={styles.label} htmlFor="login-email">Email</label>
           <input
             id="login-email"
             className={styles.input}
@@ -65,7 +64,6 @@ const LoginForm = () => {
         </div>
 
         <div className={styles.field}>
-          <label className={styles.label} htmlFor="login-password">Пароль</label>
           <input
             id="login-password"
             className={styles.input}

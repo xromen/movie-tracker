@@ -18,6 +18,7 @@ type tvShowResponse struct {
 	ReleaseDate string  `json:"release_date"`
 	VoteAverage float32 `json:"vote_average"`
 	VoteCount   int64   `json:"vote_count"`
+	WatchStatus string  `json:"watch_status,omitempty"`
 }
 
 type tvShowSearchResponse struct {
@@ -108,9 +109,15 @@ func (h *TVShowHandler) Search(c *gin.Context) {
 }
 
 func (h *TVShowHandler) GetAiringToday(c *gin.Context) {
+	var userID *int64
+	if id, exists := c.Get(ContextUserID); exists {
+		if v, ok := id.(int64); ok {
+			userID = &v
+		}
+	}
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 
-	result, err := h.tvShowService.GetAiringToday(c.Request.Context(), page)
+	result, err := h.tvShowService.GetAiringToday(c.Request.Context(), userID, page)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
@@ -120,9 +127,15 @@ func (h *TVShowHandler) GetAiringToday(c *gin.Context) {
 }
 
 func (h *TVShowHandler) GetPopular(c *gin.Context) {
+	var userID *int64
+	if id, exists := c.Get(ContextUserID); exists {
+		if v, ok := id.(int64); ok {
+			userID = &v
+		}
+	}
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 
-	result, err := h.tvShowService.GetPopular(c.Request.Context(), page)
+	result, err := h.tvShowService.GetPopular(c.Request.Context(), userID, page)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
@@ -132,9 +145,15 @@ func (h *TVShowHandler) GetPopular(c *gin.Context) {
 }
 
 func (h *TVShowHandler) GetTopRated(c *gin.Context) {
+	var userID *int64
+	if id, exists := c.Get(ContextUserID); exists {
+		if v, ok := id.(int64); ok {
+			userID = &v
+		}
+	}
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 
-	result, err := h.tvShowService.GetTopRated(c.Request.Context(), page)
+	result, err := h.tvShowService.GetTopRated(c.Request.Context(), userID, page)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
@@ -144,9 +163,15 @@ func (h *TVShowHandler) GetTopRated(c *gin.Context) {
 }
 
 func (h *TVShowHandler) GetOnTheAir(c *gin.Context) {
+	var userID *int64
+	if id, exists := c.Get(ContextUserID); exists {
+		if v, ok := id.(int64); ok {
+			userID = &v
+		}
+	}
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 
-	result, err := h.tvShowService.GetOnTheAir(c.Request.Context(), page)
+	result, err := h.tvShowService.GetOnTheAir(c.Request.Context(), userID, page)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
@@ -168,10 +193,16 @@ func (h *TVShowHandler) GetTVShowDetail(c *gin.Context) {
 }
 
 func (h *TVShowHandler) GetRecommendations(c *gin.Context) {
+	var userID *int64
+	if id, exists := c.Get(ContextUserID); exists {
+		if v, ok := id.(int64); ok {
+			userID = &v
+		}
+	}
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 
-	result, err := h.tvShowService.GetRecommendations(c.Request.Context(), id, page)
+	result, err := h.tvShowService.GetRecommendations(c.Request.Context(), userID, id, page)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
@@ -291,6 +322,7 @@ func toTVShowResponse(tvShow domain.Media) tvShowResponse {
 		ReleaseDate: tvShow.ReleaseDate,
 		VoteAverage: tvShow.VoteAverage,
 		VoteCount:   tvShow.VoteCount,
+		WatchStatus: string(tvShow.WatchStatus),
 	}
 }
 

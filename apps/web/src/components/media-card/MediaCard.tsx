@@ -15,7 +15,7 @@ import {
 import {createPortal} from "react-dom"
 import ContentLoader from "react-content-loader"
 import {removeWatchStatus, setWatchStatus} from "@/lib/api/media"
-import type {MediaType, WatchStatus} from "@/lib/api/types"
+import {getTypeLabel, MediaType, WatchStatus} from "@/lib/api/types"
 import styles from "./MediaCard.module.css"
 
 interface MediaCardProps {
@@ -30,6 +30,7 @@ interface MediaCardProps {
     watchStatus?: WatchStatus
     type?: MediaType
     isLoading?: boolean
+    withTypeBadge?: boolean
 }
 
 const POPOVER_WIDTH = 340
@@ -65,8 +66,6 @@ const formatVotes = (count?: number) => {
     return count >= 1000 ? `${(count / 1000).toFixed(1)}К оценки` : `${count} оценки`
 }
 
-const getTypeLabel = (mediaType: MediaType) => mediaType === "tv" ? "Сериал" : "Фильм"
-
 const MediaCard = ({
                        id,
                        title,
@@ -79,6 +78,7 @@ const MediaCard = ({
                        watchStatus,
                        type,
                        isLoading,
+                       withTypeBadge,
                    }: MediaCardProps) => {
     const popoverId = useId()
     const infoButtonRef = useRef<HTMLButtonElement>(null)
@@ -288,6 +288,10 @@ const MediaCard = ({
                     </div>
                 </div>
             </Link>
+
+            {withTypeBadge && (
+                <span className={styles.typeBadge}>{getTypeLabel(type)}</span>
+            )}
 
             <div
                 className={styles.quickActions}

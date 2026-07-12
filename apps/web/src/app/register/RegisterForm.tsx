@@ -48,7 +48,6 @@ const RegisterForm = () => {
 
       <form onSubmit={handleSubmit} className={styles.form} aria-describedby={error ? REGISTER_ERROR_ID : undefined}>
         <div className={styles.field}>
-          <label className={styles.label} htmlFor="register-email">Email</label>
           <input
             id="register-email"
             className={styles.input}
@@ -62,7 +61,6 @@ const RegisterForm = () => {
         </div>
 
         <div className={styles.field}>
-          <label className={styles.label} htmlFor="register-username">Имя пользователя</label>
           <input
             id="register-username"
             className={styles.input}
@@ -76,7 +74,6 @@ const RegisterForm = () => {
         </div>
 
         <div className={styles.field}>
-          <label className={styles.label} htmlFor="register-password">Пароль</label>
           <input
             id="register-password"
             className={styles.input}
@@ -91,7 +88,6 @@ const RegisterForm = () => {
         </div>
 
         <div className={styles.field}>
-          <label className={styles.label} htmlFor="register-repeat-password">Повтор пароля</label>
           <input
             id="register-repeat-password"
             className={styles.input}

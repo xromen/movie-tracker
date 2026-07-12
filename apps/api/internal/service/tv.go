@@ -15,8 +15,8 @@ import (
 type tvShowRepository interface {
 	Upsert(ctx context.Context, movie *domain.Media) error
 	GetByTmdbID(ctx context.Context, tmdbID int64) (*domain.Media, error)
-	GetUserList(ctx context.Context, userID int64, status domain.WatchStatus, mediaType domain.MediaType, page, perPage int) ([]domain.UserMedia, int, error)
 	GetMediaUserStatus(ctx context.Context, userID, mediaID int64) (*domain.WatchStatus, error)
+	GetMediaUserStatuses(ctx context.Context, userID int64, mediaIDs []int64) (map[int64]domain.WatchStatus, error)
 	GetWatchedEpisodeNumbers(ctx context.Context, userID, tvShowID int64, seasonNumber int) ([]int, error)
 	SetEpisodeWatched(ctx context.Context, userID, tvShowID int64, seasonNumber, episodeNumber int, watched bool) error
 	MarkSeasonWatched(ctx context.Context, userID, tvShowID int64, seasonNumber int, episodeNumbers []int32) error
@@ -51,13 +51,12 @@ type TVShowListOutput struct {
 
 type TVShowService interface {
 	Search(ctx context.Context, query string, page int) (*TVShowPageOutput, error)
-	GetAiringToday(ctx context.Context, page int) (*TVShowPageOutput, error)
-	GetOnTheAir(ctx context.Context, page int) (*TVShowPageOutput, error)
-	GetPopular(ctx context.Context, page int) (*TVShowPageOutput, error)
-	GetTopRated(ctx context.Context, page int) (*TVShowPageOutput, error)
+	GetAiringToday(ctx context.Context, userID *int64, page int) (*TVShowPageOutput, error)
+	GetOnTheAir(ctx context.Context, userID *int64, page int) (*TVShowPageOutput, error)
+	GetPopular(ctx context.Context, userID *int64, page int) (*TVShowPageOutput, error)
+	GetTopRated(ctx context.Context, userID *int64, page int) (*TVShowPageOutput, error)
 	GetDetails(ctx context.Context, id int64) (*domain.TVShowDetail, error)
-	GetRecommendations(ctx context.Context, id int64, page int) (*TVShowPageOutput, error)
-	GetUserTVShows(ctx context.Context, userID int64, status domain.WatchStatus, page, perPage int) (*TVShowListOutput, error)
+	GetRecommendations(ctx context.Context, userID *int64, id int64, page int) (*TVShowPageOutput, error)
 	GetSeasonEpisodes(ctx context.Context, userID *int64, tvID int64, seasonNumber int, page int) (*EpisodePageOutput, error)
 	SetEpisodeWatched(ctx context.Context, userID, tvShowID int64, seasonNumber, episodeNumber int, watched bool) error
 	MarkSeasonWatched(ctx context.Context, userID, tvShowID int64, seasonNumber int) error
@@ -128,7 +127,7 @@ func (s *tvShowService) Search(ctx context.Context, query string, page int) (*TV
 	return output, nil
 }
 
-func (s *tvShowService) GetAiringToday(ctx context.Context, page int) (*TVShowPageOutput, error) {
+func (s *tvShowService) GetAiringToday(ctx context.Context, userID *int64, page int) (*TVShowPageOutput, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -164,10 +163,10 @@ func (s *tvShowService) GetAiringToday(ctx context.Context, page int) (*TVShowPa
 		}
 	})
 
-	return output, nil
+	return s.withWatchStatuses(ctx, output, userID), nil
 }
 
-func (s *tvShowService) GetPopular(ctx context.Context, page int) (*TVShowPageOutput, error) {
+func (s *tvShowService) GetPopular(ctx context.Context, userID *int64, page int) (*TVShowPageOutput, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -203,10 +202,10 @@ func (s *tvShowService) GetPopular(ctx context.Context, page int) (*TVShowPageOu
 		}
 	})
 
-	return output, nil
+	return s.withWatchStatuses(ctx, output, userID), nil
 }
 
-func (s *tvShowService) GetTopRated(ctx context.Context, page int) (*TVShowPageOutput, error) {
+func (s *tvShowService) GetTopRated(ctx context.Context, userID *int64, page int) (*TVShowPageOutput, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -242,10 +241,10 @@ func (s *tvShowService) GetTopRated(ctx context.Context, page int) (*TVShowPageO
 		}
 	})
 
-	return output, nil
+	return s.withWatchStatuses(ctx, output, userID), nil
 }
 
-func (s *tvShowService) GetOnTheAir(ctx context.Context, page int) (*TVShowPageOutput, error) {
+func (s *tvShowService) GetOnTheAir(ctx context.Context, userID *int64, page int) (*TVShowPageOutput, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -281,101 +280,7 @@ func (s *tvShowService) GetOnTheAir(ctx context.Context, page int) (*TVShowPageO
 		}
 	})
 
-	return output, nil
-}
-
-// func (s *tvShowService) AddToList(ctx context.Context, input AddToTVShowListInput) (*domain.UserMedia, error) {
-// 	if !input.Status.IsValid() {
-// 		return nil, domain.NewValidationError("status", "invalid status value")
-// 	}
-
-// 	tvShow, err := s.tvShowRepo.GetByTmdbID(ctx, input.TmdbID)
-// 	if err != nil {
-// 		if !errors.Is(err, domain.ErrNotFound) {
-// 			return nil, fmt.Errorf("add to list: %w", err)
-// 		}
-
-// 		tvShow, err = s.tmdbClient.GetTVShow(ctx, input.TmdbID)
-// 		if err != nil {
-// 			return nil, fmt.Errorf("add to list: %w", err)
-// 		}
-
-// 		if err := s.tvShowRepo.Upsert(ctx, tvShow); err != nil {
-// 			return nil, fmt.Errorf("add to list, upsert tv show: %w", err)
-// 		}
-// 	}
-
-// 	userTVShow := &domain.UserMedia{
-// 		Media:  tvShow,
-// 		Status: input.Status,
-// 		Rating: input.Rating,
-// 	}
-
-// 	if err := s.tvShowRepo.AddToUserList(ctx, input.UserID, userTVShow); err != nil {
-// 		return nil, fmt.Errorf("add to userlist: %w", err)
-// 	}
-
-// 	cache.InBackground(func() {
-// 		cacheCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-// 		defer cancel()
-
-// 		if err := s.cache.Delete(cacheCtx, cache.TVShowUserDetailKey(input.UserID, tvShow.ID)); err != nil {
-// 			s.logger.Warn("failed to invalidate cache", "error", err)
-// 		}
-// 		if err := s.cache.DeleteByPattern(cacheCtx, cache.UserMediaListTemplate(input.UserID, string(input.Status), string(domain.MediaTypeTV))); err != nil {
-// 			s.logger.Warn("failed to invalidate cache", "error", err)
-// 		}
-// 		if err := s.cache.DeleteByPattern(cacheCtx, cache.UserMediaListTemplate(input.UserID, "", string(domain.MediaTypeTV))); err != nil {
-// 			s.logger.Warn("failed to invalidate cache", "error", err)
-// 		}
-// 	})
-
-// 	return userTVShow, nil
-// }
-
-func (s *tvShowService) GetUserTVShows(
-	ctx context.Context,
-	userID int64,
-	status domain.WatchStatus,
-	page, perPage int,
-) (*TVShowListOutput, error) {
-	if !status.IsValid() && status != "" {
-		return nil, domain.NewValidationError("status", "invalid status value")
-	}
-	if perPage < 1 || perPage > 100 {
-		perPage = 20
-	}
-	if page < 1 {
-		page = 1
-	}
-
-	cacheKey := cache.UserTVShowsKey(userID, string(status), page, perPage)
-	var output TVShowListOutput
-	if err := s.cache.Get(ctx, cacheKey, &output); err == nil {
-		return &output, nil
-	}
-
-	tvShows, total, err := s.tvShowRepo.GetUserList(ctx, userID, status, domain.MediaTypeTV, page, perPage)
-	if err != nil {
-		return nil, fmt.Errorf("get tv shows: %w", err)
-	}
-
-	result := &TVShowListOutput{
-		TVShows: tvShows,
-		Total:   total,
-		Page:    page,
-		PerPage: perPage,
-	}
-
-	cache.InBackground(func() {
-		cacheCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel()
-		if err := s.cache.Set(cacheCtx, cacheKey, result, userMoviesCacheTTL); err != nil {
-			s.logger.Warn("failed to cache user tv shows", "error", err)
-		}
-	})
-
-	return result, nil
+	return s.withWatchStatuses(ctx, output, userID), nil
 }
 
 func (s *tvShowService) GetDetails(ctx context.Context, id int64) (*domain.TVShowDetail, error) {
@@ -391,30 +296,6 @@ func (s *tvShowService) GetDetails(ctx context.Context, id int64) (*domain.TVSho
 		return nil, fmt.Errorf("get tv show details: %w", err)
 	}
 
-	// var watchStatus *domain.WatchStatus
-	// if userID != nil {
-	// 	watchStatus, err = s.tvShowRepo.GetMediaUserStatus(ctx, *userID, tvShow.ID)
-	// 	if err != nil {
-	// 		if !errors.Is(err, domain.ErrNotFound) {
-	// 			return nil, fmt.Errorf("get tv show user status: %w", err)
-	// 		}
-	// 	}
-
-	// 	for i := range tvShow.Seasons {
-	// 		watchedEpisodes, err := s.tvShowRepo.GetWatchedEpisodeNumbers(ctx, *userID, id, tvShow.Seasons[i].SeasonNumber)
-	// 		if err != nil {
-	// 			s.logger.Warn("failed to get watched episode numbers",
-	// 				"error", err,
-	// 				"tvshowid", id,
-	// 				"seasonnumber", tvShow.Seasons[i].SeasonNumber)
-	// 			continue
-	// 		}
-
-	// 		seasonWatched := len(watchedEpisodes) == tvShow.Seasons[i].EpisodeCount && tvShow.Seasons[i].EpisodeCount != 0
-	// 		tvShow.Seasons[i].IsWatched = &seasonWatched
-	// 	}
-	// }
-
 	cache.InBackground(func() {
 		cacheCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
@@ -426,12 +307,12 @@ func (s *tvShowService) GetDetails(ctx context.Context, id int64) (*domain.TVSho
 	return tvShow, nil
 }
 
-func (s *tvShowService) GetRecommendations(ctx context.Context, id int64, page int) (*TVShowPageOutput, error) {
+func (s *tvShowService) GetRecommendations(ctx context.Context, userID *int64, id int64, page int) (*TVShowPageOutput, error) {
 	var cacheKey = cache.TVShowRecommendationsKey(id, page)
 
-	var output TVShowPageOutput
-	if err := s.cache.Get(ctx, cacheKey, &output); err == nil {
-		return &output, nil
+	var chacheResult TVShowPageOutput
+	if err := s.cache.Get(ctx, cacheKey, &chacheResult); err == nil {
+		return &chacheResult, nil
 	}
 
 	result, err := s.tmdbClient.GetTVShowRecommendations(ctx, id, page)
@@ -439,7 +320,7 @@ func (s *tvShowService) GetRecommendations(ctx context.Context, id int64, page i
 		return nil, fmt.Errorf("get tv show recommendations: %w", err)
 	}
 
-	output = *toTvPageOutput(result)
+	output := toTvPageOutput(result)
 
 	cache.InBackground(func() {
 		cacheCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -449,7 +330,7 @@ func (s *tvShowService) GetRecommendations(ctx context.Context, id int64, page i
 		}
 	})
 
-	return &output, nil
+	return s.withWatchStatuses(ctx, output, userID), nil
 }
 
 func (s *tvShowService) GetSeasonEpisodes(ctx context.Context, userID *int64, tvShowID int64, seasonNumber int, page int) (*EpisodePageOutput, error) {
@@ -632,6 +513,31 @@ func (s *tvShowService) withWatchedEpisodes(
 	}
 
 	return output, nil
+}
+
+func (s *tvShowService) withWatchStatuses(ctx context.Context, out *TVShowPageOutput, userID *int64) *TVShowPageOutput {
+	if userID == nil {
+		return out
+	}
+
+	mediaIDs := make([]int64, 0, len(out.TVShows))
+	for _, tv := range out.TVShows {
+		mediaIDs = append(mediaIDs, tv.ID)
+	}
+
+	statuses, err := s.tvShowRepo.GetMediaUserStatuses(ctx, *userID, mediaIDs)
+	if err != nil {
+		s.logger.Warn("failed to get tv show statuses", "error", err)
+		return out
+	}
+
+	for i := range out.TVShows {
+		if status, ok := statuses[out.TVShows[i].ID]; ok {
+			out.TVShows[i].WatchStatus = status
+		}
+	}
+
+	return out
 }
 
 func toTvPageOutput(result *tmdb.Paginated[domain.Media]) *TVShowPageOutput {

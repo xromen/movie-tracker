@@ -82,6 +82,14 @@ func StructuredLogger(logger *slog.Logger) gin.HandlerFunc {
 		if len(c.Errors) > 0 {
 			attrs = append(attrs, "errors", c.Errors.String())
 		}
+		if id, exists := c.Get(ContextUserID); exists {
+			if v, ok := id.(int64); ok {
+				attrs = append(attrs, "userID", v)
+			}
+		}
+		if username, exists := c.Get(ContextUsername); exists {
+			attrs = append(attrs, "username", username)
+		}
 
 		// Уровень лога зависит от статуса ответа.
 		switch {
@@ -145,7 +153,7 @@ func AuthMiddleware(jwtManager jwt.Manager, userService userService, role *strin
 	}
 }
 
-func OptionalAuthMiddleware(jwtManager jwt.Manager) gin.HandlerFunc {
+func OptionalAuthMiddleware(jwtManager jwt.Manager, userService userService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		accessToken, _ := getAuthTokens(c)
 		if accessToken == nil {
@@ -153,11 +161,22 @@ func OptionalAuthMiddleware(jwtManager jwt.Manager) gin.HandlerFunc {
 			return
 		}
 
-		if claims, err := jwtManager.Validate(*accessToken); err == nil {
-			c.Set(ContextUserID, claims.UserID)
-			c.Set(ContextUsername, claims.Username)
+		claims, err := jwtManager.Validate(*accessToken)
+		if err != nil {
+			setAuthCookies(c, nil)
+			c.Next()
+			return
 		}
 
+		authVersionValidated, err := userService.ValidateAuthVersion(c.Request.Context(), claims.UserID, claims.AuthVersion)
+		if err != nil || !authVersionValidated {
+			setAuthCookies(c, nil)
+			c.Next()
+			return
+		}
+
+		c.Set(ContextUserID, claims.UserID)
+		c.Set(ContextUsername, claims.Username)
 		c.Next()
 	}
 }
