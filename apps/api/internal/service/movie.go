@@ -129,7 +129,7 @@ func (s *movieService) GetNowPlaying(ctx context.Context, userID *int64, page in
 	var cacheResult MoviePageOutput
 	err := s.cache.Get(ctx, cacheKey, &cacheResult)
 	if err == nil {
-		return &cacheResult, nil
+		return s.withWatchStatuses(ctx, &cacheResult, userID), nil
 	}
 
 	if !errors.Is(err, cache.ErrCacheMiss) {
@@ -168,7 +168,7 @@ func (s *movieService) GetPopular(ctx context.Context, userID *int64, page int) 
 	var cacheResult MoviePageOutput
 	err := s.cache.Get(ctx, cacheKey, &cacheResult)
 	if err == nil {
-		return &cacheResult, nil
+		return s.withWatchStatuses(ctx, &cacheResult, userID), nil
 	}
 
 	if !errors.Is(err, cache.ErrCacheMiss) {
@@ -207,7 +207,7 @@ func (s *movieService) GetTopRated(ctx context.Context, userID *int64, page int)
 	var cacheResult MoviePageOutput
 	err := s.cache.Get(ctx, cacheKey, &cacheResult)
 	if err == nil {
-		return &cacheResult, nil
+		return s.withWatchStatuses(ctx, &cacheResult, userID), nil
 	}
 
 	if !errors.Is(err, cache.ErrCacheMiss) {
@@ -246,7 +246,7 @@ func (s *movieService) GetUpcoming(ctx context.Context, userID *int64, page int)
 	var cacheResult MoviePageOutput
 	err := s.cache.Get(ctx, cacheKey, &cacheResult)
 	if err == nil {
-		return &cacheResult, nil
+		return s.withWatchStatuses(ctx, &cacheResult, userID), nil
 	}
 
 	if !errors.Is(err, cache.ErrCacheMiss) {
@@ -306,7 +306,7 @@ func (s *movieService) GetRecommendations(ctx context.Context, userID *int64, id
 
 	var cacheResult MoviePageOutput
 	if err := s.cache.Get(ctx, cacheKey, &cacheResult); err == nil {
-		return &cacheResult, nil
+		return s.withWatchStatuses(ctx, &cacheResult, userID), nil
 	}
 
 	result, err := s.tmdbClient.GetMovieRecommendations(ctx, id, page)

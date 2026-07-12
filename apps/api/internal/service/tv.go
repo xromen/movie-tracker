@@ -137,7 +137,7 @@ func (s *tvShowService) GetAiringToday(ctx context.Context, userID *int64, page 
 	var cacheResult TVShowPageOutput
 	err := s.cache.Get(ctx, cacheKey, &cacheResult)
 	if err == nil {
-		return &cacheResult, nil
+		return s.withWatchStatuses(ctx, &cacheResult, userID), nil
 	}
 
 	if !errors.Is(err, cache.ErrCacheMiss) {
@@ -176,7 +176,7 @@ func (s *tvShowService) GetPopular(ctx context.Context, userID *int64, page int)
 	var cacheResult TVShowPageOutput
 	err := s.cache.Get(ctx, cacheKey, &cacheResult)
 	if err == nil {
-		return &cacheResult, nil
+		return s.withWatchStatuses(ctx, &cacheResult, userID), nil
 	}
 
 	if !errors.Is(err, cache.ErrCacheMiss) {
@@ -215,7 +215,7 @@ func (s *tvShowService) GetTopRated(ctx context.Context, userID *int64, page int
 	var cacheResult TVShowPageOutput
 	err := s.cache.Get(ctx, cacheKey, &cacheResult)
 	if err == nil {
-		return &cacheResult, nil
+		return s.withWatchStatuses(ctx, &cacheResult, userID), nil
 	}
 
 	if !errors.Is(err, cache.ErrCacheMiss) {
@@ -254,7 +254,7 @@ func (s *tvShowService) GetOnTheAir(ctx context.Context, userID *int64, page int
 	var cacheResult TVShowPageOutput
 	err := s.cache.Get(ctx, cacheKey, &cacheResult)
 	if err == nil {
-		return &cacheResult, nil
+		return s.withWatchStatuses(ctx, &cacheResult, userID), nil
 	}
 
 	if !errors.Is(err, cache.ErrCacheMiss) {
@@ -312,7 +312,7 @@ func (s *tvShowService) GetRecommendations(ctx context.Context, userID *int64, i
 
 	var chacheResult TVShowPageOutput
 	if err := s.cache.Get(ctx, cacheKey, &chacheResult); err == nil {
-		return &chacheResult, nil
+		return s.withWatchStatuses(ctx, &chacheResult, userID), nil
 	}
 
 	result, err := s.tmdbClient.GetTVShowRecommendations(ctx, id, page)
