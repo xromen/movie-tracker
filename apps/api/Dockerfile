@@ -11,6 +11,8 @@ RUN go mod download
 
 COPY . .
 
+RUN mkdir -p /app/logs && chown 65534:65534 /app/logs
+
 # Сборка.
 # CGO_ENABLED=0 — статическая линковка, нет зависимости от libc.
 # GOOS=linux — явно указываем целевую ОС.
@@ -33,6 +35,8 @@ COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /app/bin/api /api
 
 COPY --from=builder /app/migrations /migrations
+
+COPY --from=builder --chown=65534:65534 /app/logs /var/log/movie-tracker
 
 EXPOSE 8080
 

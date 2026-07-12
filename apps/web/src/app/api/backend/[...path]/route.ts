@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth/cookies";
 import {getApiUrl} from "@/lib/api/url";
 import {getSingleFlightRefreshCookies} from "@/lib/auth/refresh-single-flight";
+import {webMetrics} from "@/lib/metrics/prometheus";
 
 interface BackendRouteContext {
     params: Promise<{
@@ -154,38 +155,47 @@ const createProxyResponse = async (
 };
 
 const proxyRequest = async (request: NextRequest, context: BackendRouteContext) => {
+    const startedAt = performance.now();
+    let status = 500;
     const {path} = await context.params;
     const headers = createBackendHeaders(request);
     const search = request.nextUrl.search;
     const apiPath = `/${path.join("/")}`;
-    const body = request.method === "GET" || request.method === "HEAD" ? undefined : await request.text();
-    const shouldRefreshBeforeRequest = apiPath !== AUTH_REFRESH_PATH && !apiPath.startsWith("/v1/auth/");
-    const refreshResult = shouldRefreshBeforeRequest
-        ? await refreshAuthCookies(request)
-        : {refreshedCookies: [] as string[], didTryRefresh: false};
 
-    if (body && !headers.has("Content-Type")) {
-        headers.set("Content-Type", "application/json");
+    try {
+        const body = request.method === "GET" || request.method === "HEAD" ? undefined : await request.text();
+        const shouldRefreshBeforeRequest = apiPath !== AUTH_REFRESH_PATH && !apiPath.startsWith("/v1/auth/");
+        const refreshResult = shouldRefreshBeforeRequest
+            ? await refreshAuthCookies(request)
+            : {refreshedCookies: [] as string[], didTryRefresh: false};
+
+        if (body && !headers.has("Content-Type")) {
+            headers.set("Content-Type", "application/json");
+        }
+
+        if (refreshResult.refreshedCookies.length > 0) {
+            headers.set("Cookie", createCookieHeader(request, refreshResult.refreshedCookies));
+        }
+
+        const apiUrl = getApiUrl(`${apiPath}${search}`);
+        const requestInit: RequestInit = {
+            method: request.method,
+            headers,
+            body,
+            cache: "no-store",
+        };
+        const response = await fetch(apiUrl, requestInit);
+
+        status = response.status;
+
+        return createProxyResponse(
+            response,
+            refreshResult.refreshedCookies,
+            refreshResult.didTryRefresh,
+        );
+    } finally {
+        webMetrics.observe(request.method, apiPath, status, (performance.now() - startedAt) / 1000);
     }
-
-    if (refreshResult.refreshedCookies.length > 0) {
-        headers.set("Cookie", createCookieHeader(request, refreshResult.refreshedCookies));
-    }
-
-    const apiUrl = getApiUrl(`${apiPath}${search}`);
-    const requestInit: RequestInit = {
-        method: request.method,
-        headers,
-        body,
-        cache: "no-store",
-    };
-    const response = await fetch(apiUrl, requestInit);
-
-    return createProxyResponse(
-        response,
-        refreshResult.refreshedCookies,
-        refreshResult.didTryRefresh,
-    );
 };
 
 export const GET = proxyRequest;

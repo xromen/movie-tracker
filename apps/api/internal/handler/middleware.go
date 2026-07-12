@@ -55,6 +55,11 @@ func generateTraceID() string {
 
 func StructuredLogger(logger *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if c.Request.URL.Path == "/metrics" {
+			c.Next()
+			return
+		}
+
 		start := time.Now()
 		path := c.Request.URL.Path
 		query := c.Request.URL.RawQuery

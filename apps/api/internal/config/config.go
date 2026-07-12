@@ -18,6 +18,7 @@ type Config struct {
 	JWT          JWTConfig
 	RefreshToken RefreshTokenConfig
 	Redis        RedisConfig
+	Logging      LoggingConfig
 }
 
 type HTTPConfig struct {
@@ -57,6 +58,10 @@ type RedisConfig struct {
 	Password string
 	DB       int
 	Disabled bool
+}
+
+type LoggingConfig struct {
+	FilePath string
 }
 
 func (c DatabaseConfig) DSN() string {
@@ -133,6 +138,9 @@ func Load() (*Config, error) {
 			Password: getEnv("REDIS_PASSWORD", ""),
 			DB:       redisDb,
 			Disabled: getEnv("REDIS_DISABLED", "false") == "true",
+		},
+		Logging: LoggingConfig{
+			FilePath: getEnv("LOG_FILE_PATH", ""),
 		},
 	}, nil
 }

@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -23,6 +25,7 @@ import (
 	"github.com/xromen/movietracker/internal/platform/database"
 	"github.com/xromen/movietracker/internal/platform/hasher"
 	"github.com/xromen/movietracker/internal/platform/jwt"
+	"github.com/xromen/movietracker/internal/platform/metrics"
 	"github.com/xromen/movietracker/internal/platform/refreshtoken"
 	"github.com/xromen/movietracker/internal/platform/tmdb"
 	"github.com/xromen/movietracker/internal/repository"
@@ -34,17 +37,24 @@ import (
 func main() {
 	_ = godotenv.Load()
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-	}))
-
-	slog.SetDefault(logger)
-
 	cfg, err := config.Load()
 	if err != nil {
 		slog.Error("failed to load config", "error", err)
 		os.Exit(1)
 	}
+
+	logWriter, closeLogWriter, err := createLogWriter(cfg.Logging.FilePath)
+	if err != nil {
+		slog.Error("failed to initialize logger", "error", err)
+		os.Exit(1)
+	}
+	defer closeLogWriter()
+
+	logger := slog.New(slog.NewJSONHandler(logWriter, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}))
+
+	slog.SetDefault(logger)
 
 	ctx, stop := signal.NotifyContext(context.Background(),
 		syscall.SIGINT,
@@ -211,8 +221,12 @@ func setupRouter(
 ) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Recovery())
+	router.Use(handler.TraceID())
 	router.Use(handler.StructuredLogger(logger()))
-	//router.Use(structuredLogger(logger()))
+
+	httpMetrics := metrics.NewHTTPMetrics()
+	router.Use(httpMetrics.Middleware())
+	router.GET("/metrics", httpMetrics.Handler())
 
 	router.Use(cors.New(cors.Config{
 		// Список разрешённых origins.
@@ -357,4 +371,23 @@ func structuredLogger(log *slog.Logger) gin.HandlerFunc {
 
 func logger() *slog.Logger {
 	return slog.Default()
+}
+
+func createLogWriter(filePath string) (io.Writer, func(), error) {
+	if filePath == "" {
+		return os.Stdout, func() {}, nil
+	}
+
+	if err := os.MkdirAll(filepath.Dir(filePath), 0o755); err != nil {
+		return nil, nil, err
+	}
+
+	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return io.MultiWriter(os.Stdout, file), func() {
+		_ = file.Close()
+	}, nil
 }
