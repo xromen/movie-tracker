@@ -1,0 +1,10 @@
+.git
+.gocache
+.idea
+.github
+.env
+*.md
+docker/
+bin/
+tmp/
+.air.toml

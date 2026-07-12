@@ -1,0 +1,53 @@
+.recommendations {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    flex: 1;
+    padding-bottom: 8px;
+
+    /* Высота скроллбара */
+    scrollbar-width: auto; /* Firefox: auto | thin | none */
+}
+
+/* Chrome, Safari, Edge */
+.recommendations::-webkit-scrollbar {
+    height: 8px; /* высота горизонтального скроллбара */
+}
+
+.recommendations::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 999px;
+}
+
+.recommendations::-webkit-scrollbar-thumb {
+    background: #2a2a4a;
+    border-radius: 999px;
+}
+
+.recommendations::-webkit-scrollbar-button {
+    display: none;
+    height: 0;
+    width: 0;
+}
+
+.recommendationsFilm {
+    flex-shrink: 0;
+    position: relative;
+    width: 200px;
+    transition: opacity 0.2s ease, border-color 0.2s ease;
+}
+
+.sentinel {
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #8888aa;
+    font-size: 14px;
+}
+
+@media (max-width: 600px) {
+    .recommendationsFilm {
+        width: 140px;
+    }
+}

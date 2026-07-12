@@ -1,0 +1,148 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 24px;
+}
+
+.modal {
+    background: #1a1a2e;
+    border: 1px solid #2a2a4a;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+    /* Никакого overflow: hidden и max-height — высота определяется контентом */
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.videoTitle {
+    font-size: 15px;
+    color: #8888aa;
+    margin: 0;
+
+    /* Обрезаем длинные названия */
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.closeButton {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #2a2a4a;
+    color: #e0e0ff;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+}
+
+.closeButton:hover {
+    background: #3a3a5a;
+}
+
+.player {
+    width: 100%;
+}
+
+/* Карусель */
+.carousel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.arrowButton {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #2a2a4a;
+    color: #e0e0ff;
+    font-size: 22px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+}
+
+.arrowButton:hover:not(:disabled) {
+    background: #3a3a5a;
+}
+
+.arrowButton:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Список миниатюр — скролл без скроллбара */
+.thumbnails {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    flex: 1;
+
+    /* Скрываем скроллбар во всех браузерах */
+    scrollbar-width: none;        /* Firefox */
+    -ms-overflow-style: none;     /* IE */
+}
+
+.thumbnails::-webkit-scrollbar {
+    display: none;                /* Chrome, Safari */
+}
+
+.thumbnail {
+    flex-shrink: 0;
+    position: relative;
+    width: 120px;
+    height: 68px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 2px solid transparent;
+    opacity: 0.6;
+    transition: opacity 0.2s ease, border-color 0.2s ease;
+}
+
+.thumbnail:hover {
+    opacity: 0.9;
+}
+
+.thumbnailActive {
+    border-color: #a78bfa;
+    opacity: 1;
+}
+
+.thumbnailImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.thumbnailIndex {
+    position: absolute;
+    bottom: 4px;
+    right: 6px;
+    font-size: 11px;
+    color: white;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 1px 5px;
+    border-radius: 4px;
+}

@@ -1,0 +1,306 @@
+/*Это просто треш. Сборщик некст жс почему то выкинул первый селектор и его не было в сборке, пришлось добавить ненужный селектор чтобы нужный был вторым
+если бы не нейронка я бы хз что делал*/
+.moduleStart {
+    display: contents;
+}
+
+.search {
+    position: relative;
+    width: 100%;
+    flex: 1 1 auto;
+    max-width: 560px;
+    min-width: 0;
+}
+
+.inputWrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 42px;
+    padding: 0 12px;
+    border-radius: 8px;
+    background: #121220;
+    border: 1px solid #2a2a4a;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.inputWrap:focus-within,
+.inputWrapActive {
+    border-color: #a78bfa;
+    background: #151528;
+    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.16);
+}
+
+.searchIcon {
+    flex: 0 0 auto;
+    color: #8888aa;
+}
+
+.input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    color: #e0e0ff;
+    background: transparent;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.input::placeholder {
+    color: #6f6f94;
+}
+
+.input::-webkit-search-cancel-button {
+    appearance: none;
+}
+
+.clearButton {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    color: #8888aa;
+}
+
+.clearButton:hover {
+    color: #e0e0ff;
+    background: #252542;
+}
+
+.modal {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    right: 0;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #121220;
+    border: 1px solid #2a2a4a;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    z-index: 150;
+}
+
+.resultsList {
+    display: flex;
+    flex-direction: column;
+}
+
+.result,
+.skeletonResult {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 12px;
+    min-height: 96px;
+    padding: 12px;
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px solid #2a2a4a;
+}
+
+.result:hover {
+    background: #18182b;
+}
+
+.poster,
+.skeletonPoster {
+    width: 58px;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border-radius: 6px;
+    background: #0f0f23;
+}
+
+.posterImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.posterPlaceholder {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    color: #6f6f94;
+    font-size: 10px;
+    line-height: 1.2;
+    text-align: center;
+}
+
+.resultInfo {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.resultTopline {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.resultTitle {
+    min-width: 0;
+    margin: 0;
+    color: #f5f3ff;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.25;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.typeBadge {
+    flex: 0 0 auto;
+    padding: 0 8px;
+    border-radius: 6px;
+    color: #bfdbfe;
+    background: rgba(59, 130, 246, 0.18);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.metaLine {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    color: #aaaac7;
+    font-size: 13px;
+}
+
+.rating {
+    flex: 0 0 auto;
+    min-width: 34px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    color: #ffffff;
+    font-weight: 800;
+    line-height: 1.35;
+    text-align: center;
+}
+
+.ratingGood {
+    background: #1d9e75;
+}
+
+.ratingMedium {
+    background: #ef9f27;
+}
+
+.ratingLow {
+    background: #e24b4a;
+}
+
+.overview {
+    color: #8888aa;
+    font-size: 12px;
+    line-height: 1.35;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+
+.totalText {
+    display: block;
+    padding: 0 14px 12px;
+    color: #6f6f94;
+    font-size: 12px;
+}
+
+.stateText {
+    padding: 22px 16px;
+    color: #aaaac7;
+    font-size: 14px;
+    text-align: center;
+}
+
+.skeletonInfo {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 2px;
+}
+
+.skeleton {
+    position: relative;
+    overflow: hidden;
+    border-radius: 6px;
+    background: #252542;
+}
+
+.skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(224, 224, 255, 0.12), transparent);
+    animation: shimmer 1.2s infinite;
+}
+
+.skeletonTitle {
+    width: 78%;
+    height: 16px;
+}
+
+.skeletonMeta {
+    width: 48%;
+    height: 13px;
+}
+
+.skeletonText {
+    width: 92%;
+    height: 30px;
+}
+
+@keyframes shimmer {
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+@media (max-width: 900px) {
+    .search {
+        flex-basis: 100%;
+        max-width: none;
+        width: 100%;
+    }
+}
+
+@media (max-width: 600px) {
+    .search {
+        min-width: 0;
+    }
+
+    .modal {
+        position: fixed;
+        top: 118px;
+        left: 16px;
+        right: 16px;
+        max-height: calc(100dvh - 136px);
+        overflow-y: auto;
+    }
+
+    .result,
+    .skeletonResult {
+        grid-template-columns: 52px minmax(0, 1fr);
+    }
+
+    .poster,
+    .skeletonPoster {
+        width: 52px;
+    }
+}

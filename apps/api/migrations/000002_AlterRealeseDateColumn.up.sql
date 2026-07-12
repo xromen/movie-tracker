@@ -1,0 +1,2 @@
+ALTER TABLE medias
+    ALTER COLUMN release_date TYPE VARCHAR(10);

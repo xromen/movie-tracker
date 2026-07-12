@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+Disallow: /login
+Disallow: /register
+Disallow: /watchlist
+Disallow: /health
+
+Sitemap: https://movietracker.ru/sitemap.xml

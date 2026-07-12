@@ -1,0 +1,65 @@
+.container {
+    display: flex;
+    gap: 12px;
+}
+
+.button {
+    position: relative;
+    aspect-ratio: 1;
+    padding: 12px;
+    border-radius: 50%;
+    background: #1a1a2e;
+    border: 1px solid #2a2a4a;
+    font-size: 18px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-wrap: nowrap;
+}
+
+.button:hover:not(:disabled) {
+    background: #2a2a4a;
+    transform: scale(1.05);
+}
+
+.button.active {
+    background: #2a2a4a;
+    border-color: #a78bfa;
+}
+
+.button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Сам тултип — псевдоэлемент */
+.button::after {
+    content: attr(data-tooltip);  /* берёт текст из data-tooltip атрибута */
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+
+    background: #2a2a4a;
+    color: #e0e0ff;
+    font-size: 12px;
+    white-space: nowrap;
+    padding: 4px 8px;
+    border-radius: 6px;
+    pointer-events: none;  /* тултип не перехватывает клики */
+
+    /* Скрыт по умолчанию */
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+/* Показываем при наведении */
+.button:hover::after {
+    opacity: 1;
+}
+
+/* Отключаем тултип для задизейбленной кнопки */
+.button:disabled::after {
+    display: none;
+}

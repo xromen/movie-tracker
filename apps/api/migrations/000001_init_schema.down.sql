@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS user_medias;
+DROP TABLE IF EXISTS medias;
+DROP TABLE IF EXISTS users;
+DROP TYPE  IF EXISTS watch_status;
+DROP TYPE  IF EXISTS media_type;

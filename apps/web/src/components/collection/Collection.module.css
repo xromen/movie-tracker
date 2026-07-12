@@ -1,0 +1,38 @@
+.parts {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    flex: 1;
+    padding-bottom: 8px;
+
+    /* Высота скроллбара */
+    scrollbar-width: auto; /* Firefox: auto | thin | none */
+}
+
+/* Chrome, Safari, Edge */
+.parts::-webkit-scrollbar {
+    height: 8px; /* высота горизонтального скроллбара */
+}
+
+.parts::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 999px;
+}
+
+.parts::-webkit-scrollbar-thumb {
+    background: #2a2a4a;
+    border-radius: 999px;
+}
+
+.parts::-webkit-scrollbar-button {
+    display: none;
+    height: 0;
+    width: 0;
+}
+
+.part {
+    flex-shrink: 0;
+    position: relative;
+    width: 200px;
+    transition: opacity 0.2s ease, border-color 0.2s ease;
+}

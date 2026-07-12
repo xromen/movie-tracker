@@ -1,0 +1,67 @@
+.wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    button {
+        width: 100%;
+        padding: 10px 14px;
+        border-radius: 8px;
+        background: transparent;
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+            background-color 0.2s ease,
+            color 0.2s ease,
+            border-color 0.2s ease,
+            transform 0.2s ease;
+    }
+
+    button:hover {
+        transform: translateY(-1px);
+    }
+
+    button:active {
+        transform: translateY(0);
+    }
+
+    .watched {
+        color: #4ade80;
+        border: 1px solid #287e34;
+    }
+
+    .watched:hover,
+    .watched.active {
+        color: #ffffff;
+        background-color: #287e34;
+    }
+
+    .wantToWatch {
+        color: #60a5fa;
+        border: 1px solid #2563eb;
+    }
+
+    .wantToWatch:hover,
+    .wantToWatch.active {
+        color: #ffffff;
+        background-color: #2563eb;
+    }
+
+    .favorite {
+        color: #fb7185;
+        border: 1px solid #e11d48;
+    }
+
+    .favorite:hover,
+    .favorite.active {
+        color: #ffffff;
+        background-color: #e11d48;
+    }
+    .error {
+        color: #f87171;
+        font-size: 0.75rem;
+        line-height: 1.35;
+        text-align: center;
+    }
+}

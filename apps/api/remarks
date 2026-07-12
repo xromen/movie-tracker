@@ -1,0 +1,28 @@
+package main
+
+import (
+	"fmt"
+
+	tmdb "github.com/cyruzin/golang-tmdb"
+)
+
+func main() {
+	//proxyURL, _ := url.Parse("http://192.168.1.146:7897")
+
+	tmdbClient, err := tmdb.InitV4("eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2ZTM0ZjQ3OTNhYTA0MTg0ZGI2MzEyNmE1NDRjZWQ3NSIsIm5iZiI6MTc1NDMzMTQ5Ny40MTUsInN1YiI6IjY4OTBmOTY5NzIxNjVkNmIwZWYzZWE0OCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.hddswzr6mJ4GTEpzt1oaE_VlxEnOMJ_XyBWLIPFZ6bQ")
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	tmdbClient.SetCustomBaseURL("http://83.142.30.2:8002/3")
+
+	movie, err := tmdbClient.GetMovieDetails(297802, nil)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println(movie)
+}

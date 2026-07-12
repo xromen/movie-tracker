@@ -1,0 +1,58 @@
+.bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 2;
+}
+
+.bar::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, #7c3aed, #a78bfa, #38bdf8);
+    box-shadow: 0 0 14px rgba(167, 139, 250, 0.55);
+}
+
+.loading {
+    opacity: 1;
+}
+
+.loading::before {
+    animation: route-loading 1.15s ease-in-out infinite;
+}
+
+.finishing {
+    opacity: 1;
+}
+
+.finishing::before {
+    transform: translateX(0);
+    transition: transform 0.22s ease-out;
+}
+
+.idle::before {
+    transform: translateX(-100%);
+}
+
+@keyframes route-loading {
+    0% {
+        transform: translateX(-100%) scaleX(0.25);
+        transform-origin: left;
+    }
+
+    45% {
+        transform: translateX(-28%) scaleX(0.62);
+        transform-origin: left;
+    }
+
+    100% {
+        transform: translateX(100%) scaleX(0.35);
+        transform-origin: left;
+    }
+}

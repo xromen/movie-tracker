@@ -1,0 +1,167 @@
+.mainContainer {
+    display: flex;
+    flex-direction: row;
+    gap: 32px;
+    align-items: flex-start;
+}
+
+.posterContainer {
+    max-width: 256px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 0 0 256px;
+}
+
+.poster {
+    width: 100%;
+    flex-shrink: 0;
+    aspect-ratio: 2/3;
+    background: #0f0f23;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #2a2a4a;
+}
+
+.posterImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.posterPlaceholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    background: #121220;
+}
+
+.info {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+.titleContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    gap: 8px;
+}
+
+.title {
+    margin: 0;
+    color: #f5f3ff;
+    font-size: 2.3rem;
+    font-weight: 700;
+    line-height: 1.08;
+    overflow-wrap: anywhere;
+}
+
+.mediaType {
+    color: #a78bfa;
+    font-size: 0.875rem;
+    font-weight: 700;
+    line-height: 1.25rem;
+    text-transform: uppercase;
+}
+
+.quickMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    color: #c7c7df;
+    font-size: 0.875rem;
+}
+
+.quickMeta span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 4px 10px;
+    border: 1px solid #2a2a4a;
+    border-radius: 999px;
+    background: #17172a;
+}
+
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+
+    tr:not(:last-child) {
+        td {
+            padding-bottom: 10px;
+        }
+    }
+
+    tr {
+        td:nth-child(1) {
+            color: #d4d4ee;
+            font-size: 0.875rem;
+            line-height: 1.5rem;
+            font-weight: 600;
+            white-space: nowrap;
+            padding-right: 16px;
+            min-width: 160px;
+        }
+
+        td:nth-child(2) {
+            color: #a8a8c5;
+            font-size: 0.875rem;
+            line-height: 1.5rem;
+            font-weight: 400;
+            width: 100%;
+        }
+    }
+}
+
+.overview {
+    max-width: 860px;
+    color: #c7c7df;
+    font-size: 0.95rem;
+    font-weight: 400;
+    line-height: 1.65;
+    text-align: left;
+}
+
+@media (max-width: 720px) {
+    .mainContainer {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .posterContainer {
+        max-width: none;
+        width: min(100%, 220px);
+        flex-basis: auto;
+        align-self: center;
+    }
+
+    .info {
+        width: 100%;
+        gap: 20px;
+    }
+
+    .title {
+        font-size: 1.75rem;
+    }
+
+    .table {
+        display: block;
+        overflow-x: auto;
+    }
+
+    .table tr td:nth-child(1) {
+        min-width: 136px;
+        white-space: normal;
+    }
+}
