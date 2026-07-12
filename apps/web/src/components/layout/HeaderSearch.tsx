@@ -133,8 +133,8 @@ const HeaderSearch = () => {
 
     const handleInputKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
         if (event.key === "Escape") {
-            setIsOpen(false)
-            setActiveIndex(-1)
+            clearSearch()
+            event.preventDefault()
             return
         }
 

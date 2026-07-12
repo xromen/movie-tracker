@@ -1,10 +1,10 @@
-import { Genre, MediaType, MovieStatus, TvStatus } from '@/lib/api/types'
+import {Genre, MediaType, MovieStatus, TvStatus} from '@/lib/api/types'
 import styles from './MediaHeader.module.css'
-import { getSession } from '@/lib/auth/session'
+import {getSession} from '@/lib/auth/session'
 import Rating from '@/components/rating/rating'
 import MediaStatusButtons from './MediaStatusButtons'
-import { convertNumberToCurrency } from "@/lib/utils/utils";
-import { getWatchStatus } from "@/lib/api/media";
+import {convertNumberToCurrency} from "@/lib/utils/utils";
+import {getWatchStatus} from "@/lib/api/media";
 
 export interface MediaHeaderProps {
     id: number
@@ -64,13 +64,13 @@ const MediaHeader = async (props: MediaHeaderProps) => {
             <div className={styles.posterContainer}>
                 <div className={styles.poster}>
                     {props.posterPath ? (
-                        <img src={props.posterPath} alt={props.title} className={styles.posterImage} />
+                        <img src={props.posterPath} alt={props.title} className={styles.posterImage}/>
                     ) : (
                         <div className={styles.posterPlaceholder}>🎬</div>
                     )}
                 </div>
                 {session.isAuthenticated && (
-                    <MediaStatusButtons mediaId={props.id} mediaType={props.type} status={watchStatus} />
+                    <MediaStatusButtons mediaId={props.id} mediaType={props.type} status={watchStatus}/>
                 )}
             </div>
             <div className={styles.info}>
@@ -78,89 +78,87 @@ const MediaHeader = async (props: MediaHeaderProps) => {
                     <p className={styles.mediaType}>{props.type === "tv" ? "Сериал" : "Фильм"}</p>
                     <h1 className={styles.title}>{props.title}</h1>
                     <div className={styles.quickMeta}>
-                        {props.releaseDate && <span>{props.releaseDate.getFullYear()}</span>}
-                        {props.runtime != undefined && props.runtime !== 0 && <span>{formatRuntime(props.runtime)}</span>}
                         {props.genres.slice(0, 3).map((genre) => (
                             <span key={genre.id}>{genre.name}</span>
                         ))}
                     </div>
                 </div>
-<table className={styles.table}>
+                <table className={styles.table}>
                     <tbody>
+                    <tr>
+                        <td>Оригинальное название</td>
+                        <td>{props.originalTitle}</td>
+                    </tr>
+                    <tr>
+                        <td>Оценка</td>
+                        <td>
+                            <Rating voteAverage={props.voteAverage} voteCount={props.voteCount}/>
+                        </td>
+                    </tr>
+                    {props.releaseDate && (
                         <tr>
-                            <td>Оригинальное название</td>
-                            <td>{props.originalTitle}</td>
+                            <td>Дата выхода</td>
+                            <td>{props.releaseDate.toLocaleDateString('ru')}</td>
                         </tr>
+                    )}
+                    {props.lastEpisodeReleaseDate && (
                         <tr>
-                            <td>Оценка</td>
-                            <td>
-                                <Rating voteAverage={props.voteAverage} voteCount={props.voteCount} />
-                            </td>
+                            <td>Последний эпизод</td>
+                            <td>{props.lastEpisodeReleaseDate.toLocaleDateString('ru')}</td>
                         </tr>
-                        {props.releaseDate && (
-                            <tr>
-                                <td>Дата выхода</td>
-                                <td>{props.releaseDate.toLocaleDateString('ru')}</td>
-                            </tr>
-                        )}
-                        {props.lastEpisodeReleaseDate && (
-                            <tr>
-                                <td>Последний эпизод</td>
-                                <td>{props.lastEpisodeReleaseDate.toLocaleDateString('ru')}</td>
-                            </tr>
-                        )}
-                        {props.nextEpisodeReleaseDate && (
-                            <tr>
-                                <td>Следующий эпизод</td>
-                                <td>{props.nextEpisodeReleaseDate.toLocaleDateString('ru')}</td>
-                            </tr>
-                        )}
-                        {props.genres.length > 0 && (
-                            <tr>
-                                <td>Жанр</td>
-                                <td>{props.genres.map((g) => g.name).join(", ")}</td>
-                            </tr>
-                        )}
-                        {props.productionCountries.length > 0 && (
-                            <tr>
-                                <td>Страна производства</td>
-                                <td>{props.productionCountries.join(", ")}</td>
-                            </tr>
-                        )}
-                        {props.budget != undefined && props.budget !== 0 && (
-                            <tr>
-                                <td>Бюджет</td>
-                                <td>{convertNumberToCurrency(props.budget, 'USD', "ru")}</td>
-                            </tr>
-                        )}
-                        {props.revenue != undefined && props.revenue !== 0 && (
-                            <tr>
-                                <td>Сборы</td>
-                                <td>{convertNumberToCurrency(props.revenue, 'USD', 'ru')}</td>
-                            </tr>
-                        )}
-                        {props.runtime != undefined && props.runtime !== 0 && (
-                            <tr>
-                                <td>Длительность</td>
-                                <td>{formatRuntime(props.runtime)}</td>
-                            </tr>
-                        )}
+                    )}
+                    {props.nextEpisodeReleaseDate && (
                         <tr>
-                            <td>Статус</td>
-                            <td>{getStatusLabel(props.status)}</td>
+                            <td>Следующий эпизод</td>
+                            <td>{props.nextEpisodeReleaseDate.toLocaleDateString('ru')}</td>
                         </tr>
-                        {props.numberOfSeasons && (
-                            <tr>
-                                <td>Количество сезонов</td>
-                                <td>{props.numberOfSeasons}</td>
-                            </tr>
-                        )}
-                        {props.numberOfEpisodes && (
-                            <tr>
-                                <td>Количество серий</td>
-                                <td>{props.numberOfEpisodes}</td>
-                            </tr>
-                        )}
+                    )}
+                    {props.genres.length > 0 && (
+                        <tr>
+                            <td>Жанр</td>
+                            <td>{props.genres.map((g) => g.name).join(", ")}</td>
+                        </tr>
+                    )}
+                    {props.productionCountries.length > 0 && (
+                        <tr>
+                            <td>Страна производства</td>
+                            <td>{props.productionCountries.join(", ")}</td>
+                        </tr>
+                    )}
+                    {props.budget != undefined && props.budget !== 0 && (
+                        <tr>
+                            <td>Бюджет</td>
+                            <td>{convertNumberToCurrency(props.budget, 'USD', "ru")}</td>
+                        </tr>
+                    )}
+                    {props.revenue != undefined && props.revenue !== 0 && (
+                        <tr>
+                            <td>Сборы</td>
+                            <td>{convertNumberToCurrency(props.revenue, 'USD', 'ru')}</td>
+                        </tr>
+                    )}
+                    {props.runtime != undefined && props.runtime !== 0 && (
+                        <tr>
+                            <td>Длительность</td>
+                            <td>{formatRuntime(props.runtime)}</td>
+                        </tr>
+                    )}
+                    <tr>
+                        <td>Статус</td>
+                        <td>{getStatusLabel(props.status)}</td>
+                    </tr>
+                    {props.numberOfSeasons && (
+                        <tr>
+                            <td>Количество сезонов</td>
+                            <td>{props.numberOfSeasons}</td>
+                        </tr>
+                    )}
+                    {props.numberOfEpisodes && (
+                        <tr>
+                            <td>Количество серий</td>
+                            <td>{props.numberOfEpisodes}</td>
+                        </tr>
+                    )}
                     </tbody>
                 </table>
 

@@ -101,6 +101,10 @@
     border-bottom: 1px solid #2a2a4a;
 }
 
+.resultActive{
+    background: #1e1e53;
+}
+
 .result:hover {
     background: #18182b;
 }

@@ -362,7 +362,7 @@ const WatchlistClient = () => {
             {!isError && isLoading && (
                 <div className={styles.grid} aria-label="Загрузка списка">
                     {Array.from({length: 10}, (_, index) => (
-                        <MediaCard key={index} isLoading />
+                        <MediaCard key={index} isLoading/>
                     ))}
                 </div>
             )}
@@ -377,7 +377,7 @@ const WatchlistClient = () => {
             {!isError && !isLoading && items.length > 0 && (
                 <div className={styles.grid}>
                     {items.map((media) => (
-                        <MediaCard key={`${media.type}-${media.id}`} {...media} type={media.type} withTypeBadge={true}/>
+                        <MediaCard key={`${media.type}-${media.id}`} {...media} type={media.type}/>
                     ))}
                 </div>
             )}

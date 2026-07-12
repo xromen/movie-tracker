@@ -30,7 +30,6 @@ interface MediaCardProps {
     watchStatus?: WatchStatus
     type?: MediaType
     isLoading?: boolean
-    withTypeBadge?: boolean
 }
 
 const POPOVER_WIDTH = 340
@@ -41,13 +40,33 @@ const STATUS_OPTIONS: {
     status: WatchStatus
     label: string
     Icon: typeof Check
+    className: string
+    badgeClassName: string
 }[] = [
-    {status: "watched", label: "Просмотрено", Icon: Check},
-    {status: "want_to_watch", label: "Хочу посмотреть", Icon: Bookmark},
-    {status: "favorite", label: "Избранное", Icon: Heart},
+    {
+        status: "watched",
+        label: "Просмотрено",
+        Icon: Check,
+        className: styles.watched,
+        badgeClassName: styles.watchedBadge
+    },
+    {
+        status: "want_to_watch",
+        label: "Хочу посмотреть",
+        Icon: Bookmark,
+        className: styles.want_to_watch,
+        badgeClassName: styles.want_to_watchBadge
+    },
+    {
+        status: "favorite",
+        label: "Избранное",
+        Icon: Heart,
+        className: styles.favorite,
+        badgeClassName: styles.favoriteBadge
+    },
 ]
 
-const getColor = (value?: number): string => {
+const getRatingColor = (value?: number): string => {
     if (!value) return ""
     if (value >= 7) return "#1D9E75"
     if (value >= 5) return "#EF9F27"
@@ -78,7 +97,6 @@ const MediaCard = ({
                        watchStatus,
                        type,
                        isLoading,
-                       withTypeBadge,
                    }: MediaCardProps) => {
     const popoverId = useId()
     const infoButtonRef = useRef<HTMLButtonElement>(null)
@@ -170,7 +188,7 @@ const MediaCard = ({
     }
 
     const shouldShowRating = voteAverage !== undefined && voteAverage !== null && voteAverage !== 0
-    const ratingColor = getColor(voteAverage)
+    const ratingColor = getRatingColor(voteAverage)
     const releaseLabel = formatDate(releaseDate)
     const votesLabel = formatVotes(voteCount)
 
@@ -233,14 +251,14 @@ const MediaCard = ({
                 {overview && <p className={styles.overview}>{overview}</p>}
 
                 <div className={styles.statusButtons} aria-label="Статус просмотра">
-                    {STATUS_OPTIONS.map(({status, label, Icon}) => {
+                    {STATUS_OPTIONS.map(({status, label, Icon, className}) => {
                         const isActive = activeStatus === status
                         const isLoadingStatus = isPending && pendingStatus === status
 
                         return (
                             <button
                                 key={status}
-                                className={`${styles.statusButton} ${isActive ? styles.statusButtonActive : ""}`}
+                                className={`${styles.statusButton} ${isActive ? styles.statusButtonActive : ""} ${className}`}
                                 type="button"
                                 onClick={() => handleStatusClick(status)}
                                 disabled={isPending}
@@ -289,28 +307,41 @@ const MediaCard = ({
                 </div>
             </Link>
 
-            {withTypeBadge && (
-                <span className={styles.typeBadge}>{getTypeLabel(type)}</span>
-            )}
+            <div className={styles.overlay}>
+                <div className={styles.badges}>
+                    {STATUS_OPTIONS
+                        .map(({status, label, Icon, badgeClassName}) => {
+                            return {
+                                status: status, elem: (
+                                    <div className={`${styles.badge} ${badgeClassName}`}>
+                                        <Icon size={15} aria-hidden="true"/>
+                                        <span>{label}</span>
+                                    </div>
+                                )
+                            }
+                        })
+                        .find(c => c.status === watchStatus)?.elem}
+                </div>
 
-            <div
-                className={styles.quickActions}
-                onPointerEnter={openPopover}
-                onPointerLeave={scheduleClosePopover}
-                onFocus={openPopover}
-                onBlur={handleBlur}
-            >
-                <button
-                    ref={infoButtonRef}
-                    className={styles.infoButton}
-                    type="button"
-                    aria-label={`Информация о медиа: ${title}`}
-                    aria-haspopup="dialog"
-                    aria-expanded={isPopoverOpen}
-                    aria-controls={isPopoverOpen ? popoverId : undefined}
+                <div
+                    className={styles.quickActions}
+                    onPointerEnter={openPopover}
+                    onPointerLeave={scheduleClosePopover}
+                    onFocus={openPopover}
+                    onBlur={handleBlur}
                 >
-                    <Info size={16} aria-hidden="true"/>
-                </button>
+                    <button
+                        ref={infoButtonRef}
+                        className={styles.infoButton}
+                        type="button"
+                        aria-label={`Информация о медиа: ${title}`}
+                        aria-haspopup="dialog"
+                        aria-expanded={isPopoverOpen}
+                        aria-controls={isPopoverOpen ? popoverId : undefined}
+                    >
+                        <Info size={16} aria-hidden="true"/>
+                    </button>
+                </div>
             </div>
 
             {popover}
