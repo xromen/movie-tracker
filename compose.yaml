@@ -2,6 +2,7 @@ name: movie-tracker
 
 services:
   frontend:
+    profiles: [ "frontend" ]
     image: movie-tracker-web:production
     build:
       context: ./apps/web
@@ -63,6 +64,7 @@ services:
     restart: unless-stopped
 
   prometheus:
+    profiles: [ "monitoring" ]
     image: prom/prometheus:latest
     container_name: movie-tracker-prometheus
     command:
@@ -88,6 +90,7 @@ services:
     restart: unless-stopped
 
   grafana:
+    profiles: [ "monitoring" ]
     image: grafana/grafana:latest
     container_name: movie-tracker-grafana
     environment:
@@ -108,6 +111,7 @@ services:
     restart: unless-stopped
 
   loki:
+    profiles: [ "monitoring" ]
     image: grafana/loki:latest
     container_name: movie-tracker-loki
     command: -config.file=/etc/loki/config.yml
@@ -119,6 +123,7 @@ services:
     restart: unless-stopped
 
   promtail:
+    profiles: [ "monitoring" ]
     image: grafana/promtail:latest
     container_name: movie-tracker-promtail
     command: -config.file=/etc/promtail/config.yml
@@ -135,6 +140,7 @@ services:
     restart: unless-stopped
 
   node-exporter:
+    profiles: [ "monitoring" ]
     image: prom/node-exporter:latest
     container_name: movie-tracker-node-exporter
     command:
@@ -145,6 +151,7 @@ services:
     restart: unless-stopped
 
   nginx-exporter:
+    profiles: [ "monitoring" ]
     image: nginx/nginx-prometheus-exporter:latest
     container_name: movie-tracker-nginx-exporter
     command:

@@ -46,7 +46,7 @@ const SeasonItem = ({ tvId, season, isAuthenticated }: { tvId: number; season: S
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [seasonWatched, setSeasonWatched] = useState(season.isWatched);
+  const [seasonWatched, setSeasonWatched] = useState(season.isWatched ?? false);
   const [isError, setIsError] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -84,7 +84,7 @@ const SeasonItem = ({ tvId, season, isAuthenticated }: { tvId: number; season: S
 
   const toggleEpisodeWatched = async (episode: Episode) => {
     await setEpisodeWatched(tvId, season.seasonNumber, episode.episodeNumber, !episode.isWatched);
-    loadEpisodes(page);
+    //loadEpisodes(page);
   };
 
   return (

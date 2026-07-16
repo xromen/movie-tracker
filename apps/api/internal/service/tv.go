@@ -15,8 +15,8 @@ import (
 type tvShowRepository interface {
 	Upsert(ctx context.Context, movie *domain.Media) error
 	GetByTmdbID(ctx context.Context, tmdbID int64) (*domain.Media, error)
-	GetMediaUserStatus(ctx context.Context, userID, mediaID int64) (*domain.WatchStatus, error)
-	GetMediaUserStatuses(ctx context.Context, userID int64, mediaIDs []int64) (map[int64]domain.WatchStatus, error)
+	GetMediaUserStatus(ctx context.Context, mediaType domain.MediaType, userID, mediaID int64) (*domain.WatchStatus, error)
+	GetMediaUserStatuses(ctx context.Context, mediaType domain.MediaType, userID int64, mediaIDs []int64) (map[int64]domain.WatchStatus, error)
 	GetWatchedEpisodeNumbers(ctx context.Context, userID, tvShowID int64, seasonNumber int) ([]int, error)
 	SetEpisodeWatched(ctx context.Context, userID, tvShowID int64, seasonNumber, episodeNumber int, watched bool) error
 	MarkSeasonWatched(ctx context.Context, userID, tvShowID int64, seasonNumber int, episodeNumbers []int32) error
@@ -353,19 +353,21 @@ func (s *tvShowService) GetSeasonEpisodes(ctx context.Context, userID *int64, tv
 		return nil, fmt.Errorf("get tv show season episodes: %w", err)
 	}
 
+	resultOutput := &EpisodePageOutput{
+		Episodes:   result.Items,
+		TotalPages: result.TotalPages,
+		TotalItems: result.TotalItems,
+	}
+
 	cache.InBackground(func() {
 		cacheCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
-		if err := s.cache.Set(cacheCtx, cacheKey, result, detailCacheTTL); err != nil {
+		if err := s.cache.Set(cacheCtx, cacheKey, resultOutput, detailCacheTTL); err != nil {
 			s.logger.Warn("failed to cache tv show season episodes", "error", err)
 		}
 	})
 
-	return s.withWatchedEpisodes(ctx, userID, tvShowID, seasonNumber, &EpisodePageOutput{
-		Episodes:   result.Items,
-		TotalPages: result.TotalPages,
-		TotalItems: result.TotalItems,
-	})
+	return s.withWatchedEpisodes(ctx, userID, tvShowID, seasonNumber, resultOutput)
 }
 
 func (s *tvShowService) SetEpisodeWatched(
@@ -525,7 +527,7 @@ func (s *tvShowService) withWatchStatuses(ctx context.Context, out *TVShowPageOu
 		mediaIDs = append(mediaIDs, tv.ID)
 	}
 
-	statuses, err := s.tvShowRepo.GetMediaUserStatuses(ctx, *userID, mediaIDs)
+	statuses, err := s.tvShowRepo.GetMediaUserStatuses(ctx, domain.MediaTypeTV, *userID, mediaIDs)
 	if err != nil {
 		s.logger.Warn("failed to get tv show statuses", "error", err)
 		return out

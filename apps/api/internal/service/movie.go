@@ -21,8 +21,8 @@ const (
 type movieRepository interface {
 	Upsert(ctx context.Context, movie *domain.Media) error
 	GetByTmdbID(ctx context.Context, tmdbID int64) (*domain.Media, error)
-	GetMediaUserStatus(ctx context.Context, userID, mediaID int64) (*domain.WatchStatus, error)
-	GetMediaUserStatuses(ctx context.Context, userID int64, mediaIDs []int64) (map[int64]domain.WatchStatus, error)
+	GetMediaUserStatus(ctx context.Context, mediaType domain.MediaType, userID, mediaID int64) (*domain.WatchStatus, error)
+	GetMediaUserStatuses(ctx context.Context, mediaType domain.MediaType, userID int64, mediaIDs []int64) (map[int64]domain.WatchStatus, error)
 }
 
 type AddToListInput struct {
@@ -337,7 +337,7 @@ func (s *movieService) withWatchStatuses(ctx context.Context, out *MoviePageOutp
 		mediaIDs = append(mediaIDs, movie.ID)
 	}
 
-	statuses, err := s.movieRepo.GetMediaUserStatuses(ctx, *userID, mediaIDs)
+	statuses, err := s.movieRepo.GetMediaUserStatuses(ctx, domain.MediaTypeMovie, *userID, mediaIDs)
 	if err != nil {
 		s.logger.Warn("failed to get movie statuses", "error", err)
 		return out

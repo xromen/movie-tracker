@@ -128,7 +128,7 @@ func Load() (*Config, error) {
 		},
 		JWT: JWTConfig{
 			Secret:         getEnv("JWT_SECRET", "change-me-in-production"),
-			AccessTokenTTL: 15 * time.Second,
+			AccessTokenTTL: 15 * time.Minute,
 		},
 		RefreshToken: RefreshTokenConfig{
 			RefreshTokenTTL: 7 * 24 * time.Hour,
