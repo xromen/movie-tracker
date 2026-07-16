@@ -42,6 +42,13 @@ type EpisodePageOutput struct {
 	TotalItems int
 }
 
+type EpisodeWatchStatusOutput struct {
+	EpisodeNumber  int
+	EpisodeWatched bool
+	SeasonNumber   int
+	SeasonWatched  bool
+}
+
 type TVShowListOutput struct {
 	TVShows []domain.UserMedia
 	Total   int
@@ -58,7 +65,7 @@ type TVShowService interface {
 	GetDetails(ctx context.Context, userID *int64, id int64) (*domain.TVShowDetail, error)
 	GetRecommendations(ctx context.Context, userID *int64, id int64, page int) (*TVShowPageOutput, error)
 	GetSeasonEpisodes(ctx context.Context, userID *int64, tvID int64, seasonNumber int, page int) (*EpisodePageOutput, error)
-	SetEpisodeWatched(ctx context.Context, userID, tvShowID int64, seasonNumber, episodeNumber int, watched bool) error
+	SetEpisodeWatched(ctx context.Context, userID, tvShowID int64, seasonNumber, episodeNumber int, watched bool) (*EpisodeWatchStatusOutput, error)
 	MarkSeasonWatched(ctx context.Context, userID, tvShowID int64, seasonNumber int) error
 	UnmarkSeasonWatched(ctx context.Context, userID, tvShowID int64, seasonNumber int) error
 }
@@ -375,15 +382,20 @@ func (s *tvShowService) SetEpisodeWatched(
 	userID, tvShowID int64,
 	seasonNumber, episodeNumber int,
 	watched bool,
-) error {
+) (*EpisodeWatchStatusOutput, error) {
 	if tvShowID <= 0 {
-		return domain.NewValidationError("tv_show_id", "must be positive")
+		return nil, domain.NewValidationError("tv_show_id", "must be positive")
 	}
 	if seasonNumber < 0 {
-		return domain.NewValidationError("season_number", "must not be negative")
+		return nil, domain.NewValidationError("season_number", "must not be negative")
 	}
 	if episodeNumber <= 0 {
-		return domain.NewValidationError("episode_number", "must be positive")
+		return nil, domain.NewValidationError("episode_number", "must be positive")
+	}
+
+	episodesOutput, err := s.GetSeasonEpisodes(ctx, nil, tvShowID, seasonNumber, 0)
+	if err != nil {
+		return nil, fmt.Errorf("get season episodes for watched status: %w", err)
 	}
 
 	if err := s.tvShowRepo.SetEpisodeWatched(
@@ -394,7 +406,12 @@ func (s *tvShowService) SetEpisodeWatched(
 		episodeNumber,
 		watched,
 	); err != nil {
-		return fmt.Errorf("set episode watched: %w", err)
+		return nil, fmt.Errorf("set episode watched: %w", err)
+	}
+
+	seasonWatched, err := s.isSeasonWatched(ctx, userID, tvShowID, seasonNumber, episodesOutput.Episodes)
+	if err != nil {
+		return nil, fmt.Errorf("get season watched status: %w", err)
 	}
 
 	cache.InBackground(func() {
@@ -406,7 +423,12 @@ func (s *tvShowService) SetEpisodeWatched(
 		}
 	})
 
-	return nil
+	return &EpisodeWatchStatusOutput{
+		EpisodeNumber:  episodeNumber,
+		EpisodeWatched: watched,
+		SeasonNumber:   seasonNumber,
+		SeasonWatched:  seasonWatched,
+	}, nil
 }
 
 func (s *tvShowService) MarkSeasonWatched(ctx context.Context, userID, tvShowID int64, seasonNumber int) error {
@@ -477,6 +499,41 @@ func (s *tvShowService) UnmarkSeasonWatched(ctx context.Context, userID, tvShowI
 	})
 
 	return nil
+}
+
+func (s *tvShowService) isSeasonWatched(
+	ctx context.Context,
+	userID, tvShowID int64,
+	seasonNumber int,
+	episodes []domain.Episode,
+) (bool, error) {
+	if len(episodes) == 0 {
+		return false, nil
+	}
+
+	watchedNumbers, err := s.tvShowRepo.GetWatchedEpisodeNumbers(
+		ctx,
+		userID,
+		tvShowID,
+		seasonNumber,
+	)
+	if err != nil {
+		return false, fmt.Errorf("get watched episodes: %w", err)
+	}
+
+	seasonEpisodeNumbers := make(map[int]struct{}, len(episodes))
+	for _, episode := range episodes {
+		seasonEpisodeNumbers[episode.EpisodeNumber] = struct{}{}
+	}
+
+	watchedInSeason := 0
+	for _, number := range watchedNumbers {
+		if _, ok := seasonEpisodeNumbers[number]; ok {
+			watchedInSeason++
+		}
+	}
+
+	return watchedInSeason == len(seasonEpisodeNumbers), nil
 }
 
 func (s *tvShowService) withWatchedSeasons(ctx context.Context, userID *int64, output *domain.TVShowDetail) (*domain.TVShowDetail, error) {

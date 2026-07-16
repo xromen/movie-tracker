@@ -145,6 +145,17 @@ export interface EpisodesResponse {
     totalItems: number
 }
 
+export interface EpisodeWatchStatusResponse {
+    episode: {
+        episodeNumber: number
+        isWatched: boolean
+    }
+    season: {
+        seasonNumber: number
+        isWatched: boolean
+    }
+}
+
 // export interface TvDetails extends Tv {
 //   userStatus: WatchStatus
 //   userRating: number

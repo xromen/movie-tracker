@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { getSeasonEpisodes, setEpisodeWatched, setSeasonWatched as saveSeasonWatched } from "@/lib/api/media";
 import type { Episode, Season } from "@/lib/api/types";
 import styles from "./SeasonList.module.css";
@@ -126,7 +126,16 @@ const SeasonItem = ({ tvId, season, isAuthenticated }: { tvId: number; season: S
     );
 
     try {
-      await setEpisodeWatched(tvId, season.seasonNumber, episode.episodeNumber, nextWatched);
+      const status = await setEpisodeWatched(tvId, season.seasonNumber, episode.episodeNumber, nextWatched);
+
+      setSeasonWatched(status.season.isWatched);
+      setEpisodes((currentEpisodes) =>
+        currentEpisodes.map((currentEpisode) =>
+          currentEpisode.episodeNumber === status.episode.episodeNumber
+            ? { ...currentEpisode, isWatched: status.episode.isWatched }
+            : currentEpisode,
+        ),
+      );
     } catch {
       setEpisodes((currentEpisodes) =>
         currentEpisodes.map((currentEpisode) =>
@@ -140,14 +149,6 @@ const SeasonItem = ({ tvId, season, isAuthenticated }: { tvId: number; season: S
       isStatusUpdating.current = false;
     }
   };
-
-  useEffect(() => {
-    if (episodes.length !== 0 && episodes.every(c => c.isWatched ?? false)) {
-      setSeasonWatched(true);
-    } else if (episodes.some(c => !c.isWatched)) {
-      setSeasonWatched(false);
-    }
-  }, [episodes]);
 
   return (
     <article className={styles.season}>

@@ -1,6 +1,7 @@
 import { fetchApi } from "./client"
 import type {
     Episode,
+    EpisodeWatchStatusResponse,
     EpisodesResponse,
     Media,
     MediaDetails,
@@ -88,6 +89,17 @@ interface ApiEpisodesResponse {
     episodes?: ApiEpisode[]
     total_pages: number
     total_items: number
+}
+
+interface ApiEpisodeWatchStatusResponse {
+    episode: {
+        episode_number: number
+        is_watched: boolean
+    }
+    season: {
+        season_number: number
+        is_watched: boolean
+    }
 }
 
 interface ApiWatchStatusResponse {
@@ -336,10 +348,18 @@ export const setEpisodeWatched = (
     seasonNumber: number,
     episodeNumber: number,
     isWatched: boolean,
-) =>
-    fetchApi(`/v1/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}/watched`, {
+) => fetchApi<ApiEpisodeWatchStatusResponse>(`/v1/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}/watched`, {
         method: isWatched ? "PUT" : "DELETE",
-    })
+    }).then((data): EpisodeWatchStatusResponse => ({
+        episode: {
+            episodeNumber: data.episode.episode_number,
+            isWatched: data.episode.is_watched,
+        },
+        season: {
+            seasonNumber: data.season.season_number,
+            isWatched: data.season.is_watched,
+        },
+    }))
 
 export const searchMulti = async (query: string, page = 1): Promise<MediasResponse> => {
     const params = new URLSearchParams({

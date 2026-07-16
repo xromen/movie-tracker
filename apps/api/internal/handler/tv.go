@@ -83,6 +83,21 @@ type tvShowEpisodeResponse struct {
 	IsWatched     *bool   `json:"is_watched,omitempty"`
 }
 
+type tvShowEpisodeWatchStatusResponse struct {
+	Episode tvShowEpisodeWatchStatusItemResponse `json:"episode"`
+	Season  tvShowSeasonWatchStatusResponse      `json:"season"`
+}
+
+type tvShowEpisodeWatchStatusItemResponse struct {
+	EpisodeNumber int  `json:"episode_number"`
+	IsWatched     bool `json:"is_watched"`
+}
+
+type tvShowSeasonWatchStatusResponse struct {
+	SeasonNumber int  `json:"season_number"`
+	IsWatched    bool `json:"is_watched"`
+}
+
 type TVShowHandler struct {
 	tvShowService service.TVShowService
 	logger        *slog.Logger
@@ -291,7 +306,7 @@ func (h *TVShowHandler) setEpisodeWatched(c *gin.Context, watched bool) {
 
 	userID, _ := c.Get(ContextUserID)
 
-	err := h.tvShowService.SetEpisodeWatched(
+	result, err := h.tvShowService.SetEpisodeWatched(
 		c.Request.Context(),
 		userID.(int64),
 		tvShowID,
@@ -304,7 +319,7 @@ func (h *TVShowHandler) setEpisodeWatched(c *gin.Context, watched bool) {
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	c.JSON(http.StatusOK, toEpisodeWatchStatusResponse(result))
 }
 
 func toPaginatedTVShows(result *service.TVShowPageOutput) tvShowSearchResponse {
@@ -398,5 +413,18 @@ func toEpisodesResponse(result *service.EpisodePageOutput) *pagedTVShowEpisodesR
 		Episodes:   episodes,
 		TotalPages: result.TotalPages,
 		TotalItems: result.TotalItems,
+	}
+}
+
+func toEpisodeWatchStatusResponse(result *service.EpisodeWatchStatusOutput) tvShowEpisodeWatchStatusResponse {
+	return tvShowEpisodeWatchStatusResponse{
+		Episode: tvShowEpisodeWatchStatusItemResponse{
+			EpisodeNumber: result.EpisodeNumber,
+			IsWatched:     result.EpisodeWatched,
+		},
+		Season: tvShowSeasonWatchStatusResponse{
+			SeasonNumber: result.SeasonNumber,
+			IsWatched:    result.SeasonWatched,
+		},
 	}
 }
