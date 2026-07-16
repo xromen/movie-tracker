@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { getSeasonEpisodes, setEpisodeWatched, setSeasonWatched as saveSeasonWatched } from "@/lib/api/media";
 import type { Episode, Season } from "@/lib/api/types";
 import styles from "./SeasonList.module.css";
@@ -48,7 +48,9 @@ const SeasonItem = ({ tvId, season, isAuthenticated }: { tvId: number; season: S
   const [totalPages, setTotalPages] = useState(1);
   const [seasonWatched, setSeasonWatched] = useState(season.isWatched ?? false);
   const [isError, setIsError] = useState(false);
+  const [statusError, setStatusError] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const isStatusUpdating = useRef(false);
 
   const loadEpisodes = (nextPage: number) => {
     startTransition(async () => {
@@ -76,15 +78,67 @@ const SeasonItem = ({ tvId, season, isAuthenticated }: { tvId: number; season: S
   };
 
   const toggleSeasonWatched = async () => {
-    const nextWatched = !seasonWatched;
+    if (isStatusUpdating.current) return;
 
-    await saveSeasonWatched(tvId, season.seasonNumber, nextWatched);
+    const nextWatched = !seasonWatched;
+    const previousSeasonWatched = seasonWatched;
+    const previousEpisodeStatuses = new Map(
+      episodes.map((episode) => [episode.id, episode.isWatched]),
+    );
+
+    isStatusUpdating.current = true;
+    setStatusError(false);
     setSeasonWatched(nextWatched);
+    setEpisodes((currentEpisodes) =>
+      currentEpisodes.map((episode) => ({ ...episode, isWatched: nextWatched })),
+    );
+
+    try {
+      await saveSeasonWatched(tvId, season.seasonNumber, nextWatched);
+    } catch {
+      setSeasonWatched(previousSeasonWatched);
+      setEpisodes((currentEpisodes) =>
+        currentEpisodes.map((episode) =>
+          previousEpisodeStatuses.has(episode.id)
+            ? { ...episode, isWatched: previousEpisodeStatuses.get(episode.id) }
+            : episode,
+        ),
+      );
+      setStatusError(true);
+    } finally {
+      isStatusUpdating.current = false;
+    }
   };
 
   const toggleEpisodeWatched = async (episode: Episode) => {
-    await setEpisodeWatched(tvId, season.seasonNumber, episode.episodeNumber, !episode.isWatched);
-    //loadEpisodes(page);
+    if (isStatusUpdating.current) return;
+
+    const nextWatched = !episode.isWatched;
+
+    isStatusUpdating.current = true;
+    setStatusError(false);
+    setEpisodes((currentEpisodes) =>
+      currentEpisodes.map((currentEpisode) =>
+        currentEpisode.id === episode.id
+          ? { ...currentEpisode, isWatched: nextWatched }
+          : currentEpisode,
+      ),
+    );
+
+    try {
+      await setEpisodeWatched(tvId, season.seasonNumber, episode.episodeNumber, nextWatched);
+    } catch {
+      setEpisodes((currentEpisodes) =>
+        currentEpisodes.map((currentEpisode) =>
+          currentEpisode.id === episode.id
+            ? { ...currentEpisode, isWatched: episode.isWatched }
+            : currentEpisode,
+        ),
+      );
+      setStatusError(true);
+    } finally {
+      isStatusUpdating.current = false;
+    }
   };
 
   return (
@@ -127,6 +181,7 @@ const SeasonItem = ({ tvId, season, isAuthenticated }: { tvId: number; season: S
         <div className={styles.episodes}>
           {isPending && <p className={styles.message}>Загрузка серий...</p>}
           {isError && <p className={styles.error}>Не удалось загрузить список серий.</p>}
+          {statusError && <p className={styles.error}>Не удалось изменить статус просмотра.</p>}
 
           {episodes.map((episode) => (
             <div className={styles.episode} key={episode.id}>
