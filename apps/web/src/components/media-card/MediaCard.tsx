@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import {Bookmark, Check, Heart, Info, Loader2} from "lucide-react"
+import { Bookmark, Check, Heart, Info, Loader2 } from "lucide-react"
 import {
     type FocusEvent as ReactFocusEvent,
     useCallback,
@@ -12,10 +12,10 @@ import {
     useState,
     useTransition,
 } from "react"
-import {createPortal} from "react-dom"
+import { createPortal } from "react-dom"
 import ContentLoader from "react-content-loader"
-import {removeWatchStatus, setWatchStatus} from "@/lib/api/media"
-import {getTypeLabel, MediaType, WatchStatus} from "@/lib/api/types"
+import { removeWatchStatus, setWatchStatus } from "@/lib/api/media"
+import { getTypeLabel, MediaType, WatchStatus } from "@/lib/api/types"
 import styles from "./MediaCard.module.css"
 
 interface MediaCardProps {
@@ -43,28 +43,28 @@ const STATUS_OPTIONS: {
     className: string
     badgeClassName: string
 }[] = [
-    {
-        status: "watched",
-        label: "Просмотрено",
-        Icon: Check,
-        className: styles.watched,
-        badgeClassName: styles.watchedBadge
-    },
-    {
-        status: "want_to_watch",
-        label: "Хочу посмотреть",
-        Icon: Bookmark,
-        className: styles.want_to_watch,
-        badgeClassName: styles.want_to_watchBadge
-    },
-    {
-        status: "favorite",
-        label: "Избранное",
-        Icon: Heart,
-        className: styles.favorite,
-        badgeClassName: styles.favoriteBadge
-    },
-]
+        {
+            status: "watched",
+            label: "Просмотрено",
+            Icon: Check,
+            className: styles.watched,
+            badgeClassName: styles.watchedBadge
+        },
+        {
+            status: "want_to_watch",
+            label: "Хочу посмотреть",
+            Icon: Bookmark,
+            className: styles.want_to_watch,
+            badgeClassName: styles.want_to_watchBadge
+        },
+        {
+            status: "favorite",
+            label: "Избранное",
+            Icon: Heart,
+            className: styles.favorite,
+            badgeClassName: styles.favoriteBadge
+        },
+    ]
 
 const getRatingColor = (value?: number): string => {
     if (!value) return ""
@@ -86,18 +86,18 @@ const formatVotes = (count?: number) => {
 }
 
 const MediaCard = ({
-                       id,
-                       title,
-                       overview,
-                       releaseDate,
-                       posterPath,
-                       className = "",
-                       voteAverage,
-                       voteCount,
-                       watchStatus,
-                       type,
-                       isLoading,
-                   }: MediaCardProps) => {
+    id,
+    title,
+    overview,
+    releaseDate,
+    posterPath,
+    className = "",
+    voteAverage,
+    voteCount,
+    watchStatus,
+    type,
+    isLoading,
+}: MediaCardProps) => {
     const popoverId = useId()
     const infoButtonRef = useRef<HTMLButtonElement>(null)
     const popoverRef = useRef<HTMLDivElement>(null)
@@ -106,7 +106,7 @@ const MediaCard = ({
     const [pendingStatus, setPendingStatus] = useState<WatchStatus | null>(null)
     const [error, setError] = useState("")
     const [isPopoverOpen, setIsPopoverOpen] = useState(false)
-    const [popoverPosition, setPopoverPosition] = useState({top: 0, left: 0})
+    const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 })
     const [isPending, startTransition] = useTransition()
 
     const updatePopoverPosition = useCallback(() => {
@@ -125,7 +125,7 @@ const MediaCard = ({
         const maxTop = Math.max(VIEWPORT_MARGIN, window.innerHeight - measuredHeight - VIEWPORT_MARGIN)
         const top = Math.min(Math.max(VIEWPORT_MARGIN, rect.top), maxTop)
 
-        setPopoverPosition({top, left})
+        setPopoverPosition({ top, left })
     }, [])
 
     const clearCloseTimer = useCallback(() => {
@@ -205,7 +205,7 @@ const MediaCard = ({
                 if (nextStatus) {
                     await setWatchStatus(id, type, nextStatus)
                 } else {
-                    await removeWatchStatus(id)
+                    await removeWatchStatus(id, type)
                 }
             } catch {
                 setActiveStatus(previousStatus)
@@ -223,7 +223,7 @@ const MediaCard = ({
             className={styles.popover}
             role="dialog"
             aria-label={`Быстрые действия: ${title}`}
-            style={{top: popoverPosition.top, left: popoverPosition.left}}
+            style={{ top: popoverPosition.top, left: popoverPosition.left }}
             onPointerEnter={openPopover}
             onPointerLeave={scheduleClosePopover}
             onFocus={openPopover}
@@ -237,9 +237,9 @@ const MediaCard = ({
                     </div>
 
                     {shouldShowRating && (
-                        <span className={styles.popoverRating} style={{background: ratingColor}}>
-              {voteAverage.toFixed(1)}
-            </span>
+                        <span className={styles.popoverRating} style={{ background: ratingColor }}>
+                            {voteAverage.toFixed(1)}
+                        </span>
                     )}
                 </div>
 
@@ -251,7 +251,7 @@ const MediaCard = ({
                 {overview && <p className={styles.overview}>{overview}</p>}
 
                 <div className={styles.statusButtons} aria-label="Статус просмотра">
-                    {STATUS_OPTIONS.map(({status, label, Icon, className}) => {
+                    {STATUS_OPTIONS.map(({ status, label, Icon, className }) => {
                         const isActive = activeStatus === status
                         const isLoadingStatus = isPending && pendingStatus === status
 
@@ -266,9 +266,9 @@ const MediaCard = ({
                                 title={isActive ? `Снять отметку: ${label}` : label}
                             >
                                 {isLoadingStatus ? (
-                                    <Loader2 className={styles.spinner} size={15} aria-hidden="true"/>
+                                    <Loader2 className={styles.spinner} size={15} aria-hidden="true" />
                                 ) : (
-                                    <Icon size={15} aria-hidden="true"/>
+                                    <Icon size={15} aria-hidden="true" />
                                 )}
                                 <span>{label}</span>
                             </button>
@@ -287,7 +287,7 @@ const MediaCard = ({
             <Link href={`/details/${type}/${id}`} className={styles.cardLink}>
                 <div className={styles.poster}>
                     {posterPath ? (
-                        <img src={posterPath} alt={title} className={styles.posterImage}/>
+                        <img src={posterPath} alt={title} className={styles.posterImage} />
                     ) : (
                         <div className={styles.posterPlaceholder}>Нет постера</div>
                     )}
@@ -299,7 +299,7 @@ const MediaCard = ({
                         <span className={styles.releaseDate}>{releaseLabel}</span>
 
                         {shouldShowRating && (
-                            <div className={styles.rating} style={{background: ratingColor}}>
+                            <div className={styles.rating} style={{ background: ratingColor }}>
                                 {voteAverage.toFixed(1)}
                             </div>
                         )}
@@ -309,18 +309,18 @@ const MediaCard = ({
 
             <div className={styles.overlay}>
                 <div className={styles.badges}>
-                    {STATUS_OPTIONS
-                        .map(({status, label, Icon, badgeClassName}) => {
+                    {activeStatus && STATUS_OPTIONS
+                        .map(({ status, label, Icon, badgeClassName }) => {
                             return {
                                 status: status, elem: (
                                     <div className={`${styles.badge} ${badgeClassName}`}>
-                                        <Icon size={15} aria-hidden="true"/>
+                                        <Icon size={15} aria-hidden="true" />
                                         <span>{label}</span>
                                     </div>
                                 )
                             }
                         })
-                        .find(c => c.status === watchStatus)?.elem}
+                        .find(c => c.status === activeStatus)?.elem}
                 </div>
 
                 <div
@@ -339,7 +339,7 @@ const MediaCard = ({
                         aria-expanded={isPopoverOpen}
                         aria-controls={isPopoverOpen ? popoverId : undefined}
                     >
-                        <Info size={16} aria-hidden="true"/>
+                        <Info size={16} aria-hidden="true" />
                     </button>
                 </div>
             </div>
@@ -360,7 +360,7 @@ const SkeletonCard = (className: string) => (
                 backgroundColor="#6d6d6d8c"
                 foregroundColor="#8d8d8d83"
             >
-                <rect x="0" y="0" width="100" height="100"/>
+                <rect x="0" y="0" width="100" height="100" />
             </ContentLoader>
         </div>
 
@@ -373,7 +373,7 @@ const SkeletonCard = (className: string) => (
                 backgroundColor="#6d6d6d8c"
                 foregroundColor="#8d8d8d83"
             >
-                <rect x="0" y="0" width="100" height="100"/>
+                <rect x="0" y="0" width="100" height="100" />
             </ContentLoader>
             <ContentLoader
                 width="70%"
@@ -383,7 +383,7 @@ const SkeletonCard = (className: string) => (
                 backgroundColor="#6d6d6d8c"
                 foregroundColor="#8d8d8d83"
             >
-                <rect x="0" y="0" width="100" height="100"/>
+                <rect x="0" y="0" width="100" height="100" />
             </ContentLoader>
             <ContentLoader
                 width="90%"
@@ -393,7 +393,7 @@ const SkeletonCard = (className: string) => (
                 backgroundColor="#6d6d6d8c"
                 foregroundColor="#8d8d8d83"
             >
-                <rect x="0" y="0" width="100" height="100"/>
+                <rect x="0" y="0" width="100" height="100" />
             </ContentLoader>
         </div>
     </div>

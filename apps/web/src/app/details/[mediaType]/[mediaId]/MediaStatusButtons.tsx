@@ -34,7 +34,7 @@ const MediaStatusButtons = ({ mediaId, mediaType, status }: MediaStatusButtonsPr
 
         try {
             if (newStatus === null) {
-                await removeWatchStatus(mediaId)
+                await removeWatchStatus(mediaId, mediaType)
             } else {
                 await setWatchStatus(mediaId, mediaType, newStatus)
             }

@@ -105,7 +105,7 @@ jobs:
           clean: false
 
       - name: Build and start stack
-        run: docker compose up --build --detach --remove-orphans
+        run: docker compose up --build --detach --remove-orphans --profile frontend
 
       - name: Check stack health
         run: |

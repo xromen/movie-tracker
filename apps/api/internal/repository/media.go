@@ -14,9 +14,9 @@ type MediaRepository interface {
 	Upsert(ctx context.Context, media *domain.Media) error
 	GetByTmdbID(ctx context.Context, tmdbID int64) (*domain.Media, error)
 	GetUserList(ctx context.Context, userID int64, status domain.WatchStatus, mediaType domain.MediaType, page, perPage int) ([]domain.UserMedia, int, error)
-	GetMediaUserStatus(ctx context.Context, userID, mediaID int64) (*domain.WatchStatus, error)
-	GetMediaUserStatuses(ctx context.Context, userID int64, mediaIDs []int64) (map[int64]domain.WatchStatus, error)
-	DeleteUserStatus(ctx context.Context, userID, mediaID int64) (*domain.UserMedia, error)
+	GetMediaUserStatus(ctx context.Context, mediaType domain.MediaType, userID, mediaID int64) (*domain.WatchStatus, error)
+	GetMediaUserStatuses(ctx context.Context, mediaType domain.MediaType, userID int64, mediaIDs []int64) (map[int64]domain.WatchStatus, error)
+	DeleteUserStatus(ctx context.Context, mediaType domain.MediaType, userID, mediaID int64) (*domain.UserMedia, error)
 	SetMediaUserStatus(ctx context.Context, userID int64, media *domain.UserMedia) error
 	GetWatchedEpisodeNumbers(ctx context.Context, userID, tvShowID int64, seasonNumber int) ([]int, error)
 	SetEpisodeWatched(ctx context.Context, userID, tvShowID int64, seasonNumber, episodeNumber int, watched bool) error
@@ -184,15 +184,16 @@ func (r *mediaRepository) GetUserList(
 	return userMedias, total, nil
 }
 
-func (r *mediaRepository) GetMediaUserStatus(ctx context.Context, userID, mediaID int64) (*domain.WatchStatus, error) {
+func (r *mediaRepository) GetMediaUserStatus(ctx context.Context, mediaType domain.MediaType, userID, mediaID int64) (*domain.WatchStatus, error) {
 	query := `
 		SELECT status
-		FROM user_medias
-		WHERE user_id = $1 AND media_id = $2
+		FROM user_medias um
+			join medias m on um.media_id = m.tmdb_id
+		WHERE um.user_id = $1 AND um.media_id = $2 AND m.media_type = $3
 	`
 
 	var status string
-	err := r.pool.QueryRow(ctx, query, userID, mediaID).Scan(&status)
+	err := r.pool.QueryRow(ctx, query, userID, mediaID, mediaType).Scan(&status)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("get user status for media: %w", domain.ErrNotFound)
@@ -208,15 +209,17 @@ func (r *mediaRepository) GetMediaUserStatus(ctx context.Context, userID, mediaI
 	return &watchStatus, nil
 }
 
-func (r *mediaRepository) GetMediaUserStatuses(ctx context.Context, userID int64, mediaIDs []int64) (map[int64]domain.WatchStatus, error) {
+func (r *mediaRepository) GetMediaUserStatuses(ctx context.Context, mediaType domain.MediaType, userID int64, mediaIDs []int64) (map[int64]domain.WatchStatus, error) {
 	query := `
 		SELECT media_id, status
-		FROM user_medias
-		WHERE user_id = $1
-		  AND media_id = ANY($2)
+		FROM user_medias um
+			join medias m on um.media_id = m.tmdb_id
+		WHERE um.user_id = $1
+		  AND um.media_id = ANY($2)
+		  AND m.media_type = $3
 	`
 
-	rows, err := r.pool.Query(ctx, query, userID, mediaIDs)
+	rows, err := r.pool.Query(ctx, query, userID, mediaIDs, mediaType)
 	if err != nil {
 		return nil, fmt.Errorf("get user media statuses: %w", err)
 	}
@@ -244,24 +247,31 @@ func (r *mediaRepository) GetMediaUserStatuses(ctx context.Context, userID int64
 	return statuses, nil
 }
 
-func (r *mediaRepository) DeleteUserStatus(ctx context.Context, userID, mediaID int64) (*domain.UserMedia, error) {
+func (r *mediaRepository) DeleteUserStatus(ctx context.Context, mediaType domain.MediaType, userID, mediaID int64) (*domain.UserMedia, error) {
 	query := `
 		WITH deleted_rows AS (
-			DELETE FROM user_medias 
-			WHERE user_id = $1 and media_id = $2
-			RETURNING *
-		)
-		SELECT 
-			d.status, d.rating,
-			m.tmdb_id, m.title, m.overview, m.poster_path, m.release_date, m.media_type, m.vote_average
-		FROM deleted_rows d
-			JOIN medias m on m.tmdb_id = d.media_id;
+		DELETE FROM user_medias um
+			USING medias m
+			WHERE um.media_id = m.tmdb_id AND um.user_id = $1 AND um.media_id = $2 AND m.media_type = $3
+			RETURNING
+				um.status,
+				um.rating,
+				m.tmdb_id,
+				m.title,
+				m.overview,
+				m.poster_path,
+				m.release_date,
+				m.media_type,
+				m.vote_average)
+	SELECT
+		*
+	FROM deleted_rows d;
 	`
 
 	var result domain.UserMedia
 	var media domain.Media
 
-	err := r.pool.QueryRow(ctx, query, userID, mediaID).Scan(
+	err := r.pool.QueryRow(ctx, query, userID, mediaID, mediaType).Scan(
 		&result.Status, &result.Rating,
 		&media.ID, &media.Title, &media.Overview, &media.PosterPath, &media.ReleaseDate, &media.Type, &media.VoteAverage,
 	)

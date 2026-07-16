@@ -36,7 +36,7 @@ const getNextRequestHeaders = async (): Promise<RequestHeaders | null> => {
     const importer = new Function("specifier", "return import(specifier)") as (
         specifier: string,
     ) => Promise<{ headers: () => Promise<RequestHeaders> | RequestHeaders }>;
-    const {headers} = await importer("next/headers.js");
+    const { headers } = await importer("next/headers.js");
 
     return headers();
 };
@@ -66,7 +66,7 @@ const createRequestInit = (
     options: FetchApiOptions,
     requestHeaders: RequestHeaders | null,
 ): RequestInit & { next?: { revalidate: number } } => {
-    const {body, headers: customHeaders, method = body === undefined ? "GET" : "POST", revalidate = 300} = options;
+    const { body, headers: customHeaders, method = body === undefined ? "GET" : "POST", revalidate = 300 } = options;
     const headers = new Headers(customHeaders);
     const requestInit: RequestInit & { next?: { revalidate: number } } = {
         method,
@@ -90,7 +90,7 @@ const createRequestInit = (
             headers.set("Cookie", cookie);
             requestInit.cache = "no-store";
         } else {
-            requestInit.next = {revalidate};
+            requestInit.next = { revalidate };
         }
     }
 
@@ -120,7 +120,7 @@ export const fetchApi = async <T = void>(path: string, options: FetchApiOptions 
     const response = await fetchApiResponse(path, options);
 
     if (!response.ok) {
-        throw new ApiError(`API request failed: ${path}`, response.status);
+        throw new ApiError(`API request failed: ${response.url}`, response.status);
     }
 
     const responseBody = await response.text();

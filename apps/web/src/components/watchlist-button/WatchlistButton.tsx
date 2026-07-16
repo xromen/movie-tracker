@@ -25,7 +25,7 @@ const WatchlistButton = ({ mediaId, currentStatus, mediaType }: WatchlistButtonP
     startTransition(async () => {
       if (selectedStatus === status) {
         try {
-          await removeWatchStatus(mediaId);
+          await removeWatchStatus(mediaId, mediaType);
           setSelectedStatus(undefined);
         } catch {
           return;

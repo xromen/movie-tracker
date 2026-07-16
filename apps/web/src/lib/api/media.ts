@@ -1,6 +1,7 @@
 import { fetchApi } from "./client"
 import type {
     Episode,
+    EpisodeWatchStatusResponse,
     EpisodesResponse,
     Media,
     MediaDetails,
@@ -88,6 +89,17 @@ interface ApiEpisodesResponse {
     episodes?: ApiEpisode[]
     total_pages: number
     total_items: number
+}
+
+interface ApiEpisodeWatchStatusResponse {
+    episode: {
+        episode_number: number
+        is_watched: boolean
+    }
+    season: {
+        season_number: number
+        is_watched: boolean
+    }
 }
 
 interface ApiWatchStatusResponse {
@@ -220,9 +232,9 @@ export const getRecommendations = async (type: MediaType, id: number, page = 1):
     return mapMediasResponse(data, type)
 }
 
-export const getWatchStatus = async (id: number): Promise<WatchStatus | null> => {
+export const getWatchStatus = async (id: number, type: MediaType): Promise<WatchStatus | null> => {
     try {
-        const data = await fetchApi<ApiWatchStatusResponse>(`/v1/watch-list/status?media_id=${id}`)
+        const data = await fetchApi<ApiWatchStatusResponse>(`/v1/watch-list/status?media_id=${id}&media_type=${type}`)
 
         return data.watch_status as WatchStatus
     }
@@ -304,8 +316,8 @@ export const setWatchStatus = (mediaId: number, mediaType: MediaType, status: Wa
         },
     })
 
-export const removeWatchStatus = (mediaId: number) =>
-    fetchApi(`/v1/watch-list/status?media_id=${mediaId}`, {
+export const removeWatchStatus = (mediaId: number, mediaType: MediaType) =>
+    fetchApi(`/v1/watch-list/status?media_id=${mediaId}&media_type=${mediaType}`, {
         method: "DELETE",
     })
 
@@ -336,10 +348,18 @@ export const setEpisodeWatched = (
     seasonNumber: number,
     episodeNumber: number,
     isWatched: boolean,
-) =>
-    fetchApi(`/v1/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}/watched`, {
+) => fetchApi<ApiEpisodeWatchStatusResponse>(`/v1/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}/watched`, {
         method: isWatched ? "PUT" : "DELETE",
-    })
+    }).then((data): EpisodeWatchStatusResponse => ({
+        episode: {
+            episodeNumber: data.episode.episode_number,
+            isWatched: data.episode.is_watched,
+        },
+        season: {
+            seasonNumber: data.season.season_number,
+            isWatched: data.season.is_watched,
+        },
+    }))
 
 export const searchMulti = async (query: string, page = 1): Promise<MediasResponse> => {
     const params = new URLSearchParams({
@@ -350,8 +370,3 @@ export const searchMulti = async (query: string, page = 1): Promise<MediasRespon
 
     return mapMediasResponse(data)
 }
-
-
-
-
-
