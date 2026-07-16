@@ -55,7 +55,7 @@ type TVShowService interface {
 	GetOnTheAir(ctx context.Context, userID *int64, page int) (*TVShowPageOutput, error)
 	GetPopular(ctx context.Context, userID *int64, page int) (*TVShowPageOutput, error)
 	GetTopRated(ctx context.Context, userID *int64, page int) (*TVShowPageOutput, error)
-	GetDetails(ctx context.Context, id int64) (*domain.TVShowDetail, error)
+	GetDetails(ctx context.Context, userID *int64, id int64) (*domain.TVShowDetail, error)
 	GetRecommendations(ctx context.Context, userID *int64, id int64, page int) (*TVShowPageOutput, error)
 	GetSeasonEpisodes(ctx context.Context, userID *int64, tvID int64, seasonNumber int, page int) (*EpisodePageOutput, error)
 	SetEpisodeWatched(ctx context.Context, userID, tvShowID int64, seasonNumber, episodeNumber int, watched bool) error
@@ -283,12 +283,12 @@ func (s *tvShowService) GetOnTheAir(ctx context.Context, userID *int64, page int
 	return s.withWatchStatuses(ctx, output, userID), nil
 }
 
-func (s *tvShowService) GetDetails(ctx context.Context, id int64) (*domain.TVShowDetail, error) {
+func (s *tvShowService) GetDetails(ctx context.Context, userID *int64, id int64) (*domain.TVShowDetail, error) {
 	cacheKey := cache.TVShowDetailKey(id)
 
 	var output domain.TVShowDetail
 	if err := s.cache.Get(ctx, cacheKey, &output); err == nil {
-		return &output, nil
+		return s.withWatchedSeasons(ctx, userID, &output)
 	}
 
 	tvShow, err := s.tmdbClient.GetTVShowDetails(ctx, id)
@@ -304,7 +304,7 @@ func (s *tvShowService) GetDetails(ctx context.Context, id int64) (*domain.TVSho
 		}
 	})
 
-	return tvShow, nil
+	return s.withWatchedSeasons(ctx, userID, tvShow)
 }
 
 func (s *tvShowService) GetRecommendations(ctx context.Context, userID *int64, id int64, page int) (*TVShowPageOutput, error) {
@@ -345,7 +345,7 @@ func (s *tvShowService) GetSeasonEpisodes(ctx context.Context, userID *int64, tv
 
 	var output *EpisodePageOutput
 	if err := s.cache.Get(ctx, cacheKey, &output); err == nil {
-		return s.withWatchedEpisodes(ctx, userID, tvShowID, seasonNumber, output)
+		return s.withWatchedEpisodes(ctx, userID, output)
 	}
 
 	result, err := s.tmdbClient.GetTvSeasonEpisodes(ctx, tvShowID, seasonNumber, page)
@@ -367,7 +367,7 @@ func (s *tvShowService) GetSeasonEpisodes(ctx context.Context, userID *int64, tv
 		}
 	})
 
-	return s.withWatchedEpisodes(ctx, userID, tvShowID, seasonNumber, resultOutput)
+	return s.withWatchedEpisodes(ctx, userID, resultOutput)
 }
 
 func (s *tvShowService) SetEpisodeWatched(
@@ -479,26 +479,49 @@ func (s *tvShowService) UnmarkSeasonWatched(ctx context.Context, userID, tvShowI
 	return nil
 }
 
+func (s *tvShowService) withWatchedSeasons(ctx context.Context, userID *int64, output *domain.TVShowDetail) (*domain.TVShowDetail, error) {
+	if userID == nil || len(output.Seasons) == 0 {
+		return output, nil
+	}
+
+	for i, season := range output.Seasons {
+		watchedNumbers, err := s.tvShowRepo.GetWatchedEpisodeNumbers(
+			ctx,
+			*userID,
+			output.ID,
+			season.SeasonNumber,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("get watched episodes: %w", err)
+		}
+
+		if len(watchedNumbers) == season.EpisodeCount {
+			value := true
+			output.Seasons[i].IsWatched = &value
+		}
+	}
+
+	return output, nil
+}
+
 func (s *tvShowService) withWatchedEpisodes(
 	ctx context.Context,
 	userID *int64,
-	tvShowID int64,
-	seasonNumber int,
 	output *EpisodePageOutput,
 ) (*EpisodePageOutput, error) {
 	for i := range output.Episodes {
 		output.Episodes[i].IsWatched = nil
 	}
 
-	if userID == nil {
+	if userID == nil || len(output.Episodes) == 0 {
 		return output, nil
 	}
 
 	watchedNumbers, err := s.tvShowRepo.GetWatchedEpisodeNumbers(
 		ctx,
 		*userID,
-		tvShowID,
-		seasonNumber,
+		output.Episodes[0].TVShowId,
+		output.Episodes[0].SeasonNumber,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get watched episodes: %w", err)

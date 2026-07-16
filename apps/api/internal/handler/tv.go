@@ -181,9 +181,15 @@ func (h *TVShowHandler) GetOnTheAir(c *gin.Context) {
 }
 
 func (h *TVShowHandler) GetTVShowDetail(c *gin.Context) {
+	var userID *int64
+	if id, exists := c.Get(ContextUserID); exists {
+		if v, ok := id.(int64); ok {
+			userID = &v
+		}
+	}
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 
-	result, err := h.tvShowService.GetDetails(c.Request.Context(), id)
+	result, err := h.tvShowService.GetDetails(c.Request.Context(), userID, id)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
