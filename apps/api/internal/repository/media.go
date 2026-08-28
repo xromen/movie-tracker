@@ -12,7 +12,7 @@ import (
 
 type MediaRepository interface {
 	Upsert(ctx context.Context, media *domain.Media) error
-	GetByTmdbID(ctx context.Context, tmdbID int64) (*domain.Media, error)
+	GetByTmdbID(ctx context.Context, tmdbID int64, mediaType domain.MediaType) (*domain.Media, error)
 	GetUserList(ctx context.Context, userID int64, status domain.WatchStatus, mediaType domain.MediaType, page, perPage int) ([]domain.UserMedia, int, error)
 	GetMediaUserStatus(ctx context.Context, mediaType domain.MediaType, userID, mediaID int64) (*domain.WatchStatus, error)
 	GetMediaUserStatuses(ctx context.Context, mediaType domain.MediaType, userID int64, mediaIDs []int64) (map[int64]domain.WatchStatus, error)
@@ -36,11 +36,11 @@ func (r *mediaRepository) Upsert(ctx context.Context, media *domain.Media) error
 	query := `
 		INSERT INTO medias (tmdb_id, title, overview, poster_path, release_date, media_type, vote_average)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		ON CONFLICT(tmdb_id) DO UPDATE SET
-		                        title = EXCLUDED.title,
-		                        overview = EXCLUDED.overview,
-		                        poster_path = EXCLUDED.poster_path,
-		                        updated_at = NOW()
+		ON CONFLICT(tmdb_id, media_type) DO UPDATE SET
+										 title = EXCLUDED.title,
+										 overview = EXCLUDED.overview,
+										 poster_path = EXCLUDED.poster_path,
+										 updated_at = NOW()
 	`
 
 	_, err := r.pool.Exec(ctx, query,
@@ -60,14 +60,16 @@ func (r *mediaRepository) Upsert(ctx context.Context, media *domain.Media) error
 	return nil
 }
 
-func (r *mediaRepository) GetByTmdbID(ctx context.Context, tmdbID int64) (*domain.Media, error) {
+func (r *mediaRepository) GetByTmdbID(ctx context.Context, tmdbID int64, mediaType domain.MediaType) (*domain.Media, error) {
 	query := `
 		SELECT tmdb_id, title, overview, poster_path, release_date, media_type
-		FROM medias WHERE tmdb_id = $1
+		FROM medias 
+		WHERE tmdb_id = $1
+		  AND media_type = $2
 	`
 
 	media := &domain.Media{}
-	err := r.pool.QueryRow(ctx, query, tmdbID).Scan(
+	err := r.pool.QueryRow(ctx, query, tmdbID, mediaType).Scan(
 		&media.ID, &media.Title, &media.Overview, &media.PosterPath,
 		&media.ReleaseDate, &media.Type)
 
@@ -84,12 +86,17 @@ func (r *mediaRepository) GetByTmdbID(ctx context.Context, tmdbID int64) (*domai
 func (r *mediaRepository) SetMediaUserStatus(ctx context.Context, userID int64, um *domain.UserMedia) error {
 	query := `
 		INSERT INTO user_medias (user_id, media_id, status, rating)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (user_id, media_id) DO UPDATE SET
-			status     = EXCLUDED.status,
-			rating     = EXCLUDED.rating,
-			watched_at = EXCLUDED.watched_at,
-			updated_at = NOW()
+		SELECT
+			$1,
+			m.id,
+			$3,
+			$4
+		FROM medias m
+		WHERE m.tmdb_id = $2
+		ON CONFLICT (user_id, media_id) DO UPDATE SET status     = EXCLUDED.status,
+													  rating     = EXCLUDED.rating,
+													  watched_at = EXCLUDED.watched_at,
+													  updated_at = NOW();
 	`
 
 	_, err := r.pool.Exec(ctx, query,
@@ -114,7 +121,7 @@ func (r *mediaRepository) GetUserList(
 		SELECT 
 			COUNT(*) 
 		FROM user_medias um
-			JOIN medias m on um.media_id = m.tmdb_id
+			JOIN medias m on um.media_id = m.id
 		WHERE um.user_id = $1 AND ($2::watch_status IS NULL OR um.status = $2) AND ($3::media_type IS NULL OR m.media_type = $3)
 	`
 
@@ -146,7 +153,7 @@ func (r *mediaRepository) GetUserList(
 			um.status, um.rating,
 			m.tmdb_id, m.title, m.overview, m.poster_path, m.release_date, m.media_type, m.vote_average
 		FROM user_medias um
-			JOIN medias m ON m.tmdb_id = um.media_id
+			JOIN medias m ON m.id = um.media_id
 		WHERE um.user_id = $1 AND ($2::media_type IS NULL OR m.media_type = $2) AND ($3::watch_status IS NULL OR um.status = $3)
 		ORDER BY um.created_at DESC
 		LIMIT $4 OFFSET $5
@@ -188,8 +195,8 @@ func (r *mediaRepository) GetMediaUserStatus(ctx context.Context, mediaType doma
 	query := `
 		SELECT status
 		FROM user_medias um
-			join medias m on um.media_id = m.tmdb_id
-		WHERE um.user_id = $1 AND um.media_id = $2 AND m.media_type = $3
+			join medias m on um.media_id = m.id
+		WHERE um.user_id = $1 AND m.tmdb_id = $2 AND m.media_type = $3
 	`
 
 	var status string
@@ -213,7 +220,7 @@ func (r *mediaRepository) GetMediaUserStatuses(ctx context.Context, mediaType do
 	query := `
 		SELECT media_id, status
 		FROM user_medias um
-			join medias m on um.media_id = m.tmdb_id
+			join medias m on um.media_id = m.id
 		WHERE um.user_id = $1
 		  AND um.media_id = ANY($2)
 		  AND m.media_type = $3
@@ -252,7 +259,7 @@ func (r *mediaRepository) DeleteUserStatus(ctx context.Context, mediaType domain
 		WITH deleted_rows AS (
 		DELETE FROM user_medias um
 			USING medias m
-			WHERE um.media_id = m.tmdb_id AND um.user_id = $1 AND um.media_id = $2 AND m.media_type = $3
+			WHERE um.media_id = m.id AND um.user_id = $1 AND m.tmdb_id = $2 AND m.media_type = $3
 			RETURNING
 				um.status,
 				um.rating,

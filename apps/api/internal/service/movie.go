@@ -20,7 +20,7 @@ const (
 
 type movieRepository interface {
 	Upsert(ctx context.Context, movie *domain.Media) error
-	GetByTmdbID(ctx context.Context, tmdbID int64) (*domain.Media, error)
+	GetByTmdbID(ctx context.Context, tmdbID int64, mediaType domain.MediaType) (*domain.Media, error)
 	GetMediaUserStatus(ctx context.Context, mediaType domain.MediaType, userID, mediaID int64) (*domain.WatchStatus, error)
 	GetMediaUserStatuses(ctx context.Context, mediaType domain.MediaType, userID int64, mediaIDs []int64) (map[int64]domain.WatchStatus, error)
 }

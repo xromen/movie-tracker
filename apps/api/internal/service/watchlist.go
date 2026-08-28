@@ -36,7 +36,7 @@ type UserWatchListOutput struct {
 
 type mediaRepository interface {
 	Upsert(ctx context.Context, media *domain.Media) error
-	GetByTmdbID(ctx context.Context, tmdbID int64) (*domain.Media, error)
+	GetByTmdbID(ctx context.Context, tmdbID int64, mediaType domain.MediaType) (*domain.Media, error)
 	GetUserList(ctx context.Context, userID int64, status domain.WatchStatus, mediaType domain.MediaType, page, perPage int) ([]domain.UserMedia, int, error)
 	GetMediaUserStatus(ctx context.Context, mediaType domain.MediaType, userID, mediaID int64) (*domain.WatchStatus, error)
 	DeleteUserStatus(ctx context.Context, mediaType domain.MediaType, userID, mediaID int64) (*domain.UserMedia, error)
@@ -125,7 +125,7 @@ func (s *watchListService) DeleteMediaUserStatus(ctx context.Context, mediaType 
 	if !mediaType.IsValid() && mediaType != "" {
 		return nil, domain.NewValidationError("media type", "invalid media type value")
 	}
-	
+
 	media, err := s.mediaRepo.DeleteUserStatus(ctx, mediaType, userID, mediaID)
 
 	if err != nil {
@@ -155,7 +155,7 @@ func (s *watchListService) GetMediaUserStatus(ctx context.Context, mediaType dom
 	if !mediaType.IsValid() && mediaType != "" {
 		return nil, domain.NewValidationError("media type", "invalid media type value")
 	}
-	
+
 	status, err := s.mediaRepo.GetMediaUserStatus(ctx, mediaType, userID, mediaID)
 
 	if err == nil {
@@ -197,7 +197,7 @@ func (s *watchListService) SetMediaUserStatus(ctx context.Context, input SetMedi
 	}
 
 	if media == nil {
-		media, err = s.mediaRepo.GetByTmdbID(ctx, input.MediaID)
+		media, err = s.mediaRepo.GetByTmdbID(ctx, input.MediaID, input.MediaType)
 
 		if err != nil {
 			return nil, fmt.Errorf("get media from tmdb: %w", err)
