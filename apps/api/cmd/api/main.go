@@ -141,7 +141,7 @@ func main() {
 	watchListService := service.NewWatchListService(mediaRepo, tmdbClient, redisCache, logger)
 	watchListHandler := handler.NewWatchListHandler(watchListService, logger)
 
-	collectionService := service.NewCollectionService(tmdbClient, redisCache, logger)
+	collectionService := service.NewCollectionService(tmdbClient, mediaRepo, redisCache, logger)
 	collectionHandler := handler.NewCollectionHandler(collectionService, logger)
 
 	searchService := service.NewSearchService(tmdbClient, redisCache, logger)
@@ -333,7 +333,7 @@ func setupRouter(
 	}
 
 	{
-		unprotectedCollections := v1.Group("/collections")
+		unprotectedCollections := v1.Group("/collections", handler.OptionalAuthMiddleware(jwtManager, userService))
 		{
 			unprotectedCollections.GET("/:id", collectionHandler.GetDetails)
 		}

@@ -218,11 +218,11 @@ func (r *mediaRepository) GetMediaUserStatus(ctx context.Context, mediaType doma
 
 func (r *mediaRepository) GetMediaUserStatuses(ctx context.Context, mediaType domain.MediaType, userID int64, mediaIDs []int64) (map[int64]domain.WatchStatus, error) {
 	query := `
-		SELECT media_id, status
+		SELECT tmdb_id, status
 		FROM user_medias um
 			join medias m on um.media_id = m.id
 		WHERE um.user_id = $1
-		  AND um.media_id = ANY($2)
+		  AND m.tmdb_id = ANY($2)
 		  AND m.media_type = $3
 	`
 

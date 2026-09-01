@@ -132,7 +132,6 @@ export const fetchApi = async <T = void>(path: string, options: FetchApiOptions 
     const contentType = response.headers.get("Content-Type") ?? "";
 
     if (contentType.includes("application/json")) {
-
         return JSON.parse(responseBody) as T;
     }
 

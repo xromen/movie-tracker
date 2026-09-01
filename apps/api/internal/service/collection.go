@@ -13,33 +13,40 @@ import (
 )
 
 type CollectionService interface {
-	GetDetails(ctx context.Context, id int64) (*domain.Collection, error)
+	GetDetails(ctx context.Context, id int64, userID *int64) (*domain.Collection, error)
+}
+
+type collectionRepository interface {
+	GetMediaUserStatuses(ctx context.Context, mediaType domain.MediaType, userID int64, mediaIDs []int64) (map[int64]domain.WatchStatus, error)
 }
 
 type collectionService struct {
-	tmdbClient tmdb.Client
-	cache      cache.Cache
-	logger     *slog.Logger
+	tmdbClient     tmdb.Client
+	collectionRepo collectionRepository
+	cache          cache.Cache
+	logger         *slog.Logger
 }
 
 func NewCollectionService(
 	tmdbClient tmdb.Client,
+	collectionRepo collectionRepository,
 	cache cache.Cache,
 	logger *slog.Logger) CollectionService {
 	return &collectionService{
-		tmdbClient: tmdbClient,
-		cache:      cache,
-		logger:     logger,
+		tmdbClient:     tmdbClient,
+		collectionRepo: collectionRepo,
+		cache:          cache,
+		logger:         logger,
 	}
 }
 
-func (s *collectionService) GetDetails(ctx context.Context, id int64) (*domain.Collection, error) {
+func (s *collectionService) GetDetails(ctx context.Context, id int64, userID *int64) (*domain.Collection, error) {
 	cacheKey := cache.CollectionKey(id)
 
 	var cacheResult domain.Collection
 	err := s.cache.Get(ctx, cacheKey, &cacheResult)
 	if err == nil {
-		return &cacheResult, nil
+		return s.withWatchStatuses(ctx, &cacheResult, userID), nil
 	}
 
 	if !errors.Is(err, cache.ErrCacheMiss) {
@@ -65,5 +72,30 @@ func (s *collectionService) GetDetails(ctx context.Context, id int64) (*domain.C
 		}
 	})
 
-	return result, nil
+	return s.withWatchStatuses(ctx, result, userID), nil
+}
+
+func (s *collectionService) withWatchStatuses(ctx context.Context, out *domain.Collection, userID *int64) *domain.Collection {
+	if userID == nil {
+		return out
+	}
+
+	mediaIDs := make([]int64, 0, len(out.Parts))
+	for _, media := range out.Parts {
+		mediaIDs = append(mediaIDs, media.ID)
+	}
+
+	statuses, err := s.collectionRepo.GetMediaUserStatuses(ctx, domain.MediaTypeMovie, *userID, mediaIDs)
+	if err != nil {
+		s.logger.Warn("failed to get movie statuses", "error", err)
+		return out
+	}
+
+	for i := range out.Parts {
+		if status, ok := statuses[out.Parts[i].ID]; ok {
+			out.Parts[i].WatchStatus = status
+		}
+	}
+
+	return out
 }

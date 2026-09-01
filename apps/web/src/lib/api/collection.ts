@@ -1,5 +1,5 @@
 import { fetchApi } from "./client"
-import type { CollectionResponse, Media } from "./types"
+import type { CollectionResponse, Media, WatchStatus } from "./types"
 
 interface ApiCollectionPart {
   id: number
@@ -10,6 +10,7 @@ interface ApiCollectionPart {
   release_date?: string | null
   vote_average: number
   vote_count: number
+  watch_status: string
 }
 
 interface ApiCollectionResponse {
@@ -34,7 +35,8 @@ export const mapCollection = (data: ApiCollectionResponse): CollectionResponse =
       type: part.type,
       releaseDate: part.release_date ? new Date(part.release_date) : undefined,
       voteAverage: part.vote_average,
-      voteCount: part.vote_count
+      voteCount: part.vote_count,
+      watchStatus: part.watch_status as WatchStatus
     })),
   }
 )
