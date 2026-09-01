@@ -285,8 +285,6 @@ export const getWatchList = async ({
 
     const data = await fetchApi<ApiWatchListResponse>(`/v1/watch-list?${params.toString()}`)
 
-    console.log(data)
-
     return {
         results: data.medias.flatMap((item): Media[] => {
             const type = item.type ?? item.media.type ?? mediaType

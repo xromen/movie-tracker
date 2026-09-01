@@ -16,4 +16,5 @@ type CollectionPart struct {
 	MediaType   string
 	ReleaseDate string
 	VoteAverage float32
+	WatchStatus WatchStatus
 }

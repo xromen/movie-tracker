@@ -26,6 +26,7 @@ type collectionPartResponse struct {
 	MediaType   string  `json:"type"`
 	ReleaseDate string  `json:"release_date"`
 	VoteAverage float32 `json:"vote_average"`
+	WatchStatus string  `json:"watch_status"`
 }
 
 type CollectionHandler struct {
@@ -42,14 +43,22 @@ func NewCollectionHandler(collectionService service.CollectionService, logger *s
 
 func (h *CollectionHandler) GetDetails(c *gin.Context) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	var userID *int64
+	if id, exists := c.Get(ContextUserID); exists {
+		if v, ok := id.(int64); ok {
+			userID = &v
+		}
+	}
 
-	result, err := h.collectionService.GetDetails(c.Request.Context(), id)
+	result, err := h.collectionService.GetDetails(c.Request.Context(), id, userID)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
 	}
 
-	c.JSON(http.StatusOK, toCollectionResponse(result))
+	response := toCollectionResponse(result)
+
+	c.JSON(http.StatusOK, response)
 }
 
 func toCollectionResponse(collection *domain.Collection) *collectionResponse {
@@ -63,6 +72,7 @@ func toCollectionResponse(collection *domain.Collection) *collectionResponse {
 			MediaType:   part.MediaType,
 			ReleaseDate: part.ReleaseDate,
 			VoteAverage: part.VoteAverage,
+			WatchStatus: string(part.WatchStatus),
 		})
 	}
 	return &collectionResponse{
