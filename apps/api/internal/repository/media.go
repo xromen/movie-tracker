@@ -154,8 +154,13 @@ func (r *mediaRepository) GetUserList(
 			m.tmdb_id, m.title, m.overview, m.poster_path, m.release_date, m.media_type, m.vote_average
 		FROM user_medias um
 			JOIN medias m ON m.id = um.media_id
+			LEFT JOIN LATERAL (SELECT *
+							   FROM user_tv_episodes ute
+							   WHERE ute.tv_show_tmdb_id = m.tmdb_id
+							   ORDER BY watched_at DESC
+							   LIMIT 1) ute ON m.media_type = 'tv'
 		WHERE um.user_id = $1 AND ($2::media_type IS NULL OR m.media_type = $2) AND ($3::watch_status IS NULL OR um.status = $3)
-		ORDER BY um.created_at DESC
+		ORDER BY GREATEST(ute.watched_at, um.updated_at) DESC
 		LIMIT $4 OFFSET $5
 	`
 
