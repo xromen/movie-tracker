@@ -3,11 +3,12 @@ package domain
 import "fmt"
 
 var (
-	ErrNotFound      = fmt.Errorf("not found")
-	ErrAlreadyExists = fmt.Errorf("already exists")
-	ErrInvalidInput  = fmt.Errorf("invalid input")
-	ErrUnauthorized  = fmt.Errorf("unauthorized")
-	ErrForbidden     = fmt.Errorf("forbidden")
+	ErrNotFound            = fmt.Errorf("not found")
+	ErrAlreadyExists       = fmt.Errorf("already exists")
+	ErrInvalidInput        = fmt.Errorf("invalid input")
+	ErrUnauthorized        = fmt.Errorf("unauthorized")
+	ErrForbidden           = fmt.Errorf("forbidden")
+	ErrBindingTokenExpired = fmt.Errorf("binding token expired")
 )
 
 type ValidationError struct {

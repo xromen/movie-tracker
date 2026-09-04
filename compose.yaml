@@ -2,7 +2,7 @@ name: movie-tracker
 
 services:
   frontend:
-    profiles: [ "frontend" ]
+    profiles: ["frontend"]
     image: movie-tracker-web:production
     build:
       context: ./apps/web
@@ -19,7 +19,11 @@ services:
         condition: service_started
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/login').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
+      test:
+        [
+          "CMD-SHELL",
+          'node -e "fetch(''http://127.0.0.1:3000/login'').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"',
+        ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -63,8 +67,38 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  telegram-bot:
+    image: movie-tracker-telegram-bot:production
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile.bot
+    container_name: movie-tracker-telegram-bot
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-change-me}
+      DB_NAME: ${DB_NAME:-movietracker}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+      DB_STATEMENT_TIMEOUT: ${DB_STATEMENT_TIMEOUT:-15s}
+
+      TMDB_BASE_URL: ${TMDB_BASE_URL:-https://api.themoviedb.org/3}
+      TMDB_IMAGES_BASE_URL: ${TMDB_IMAGES_BASE_URL:-https://image.tmdb.org}
+      TMDB_BEARER_TOKEN: ${TMDB_BEARER_TOKEN}
+      TMDB_TIMEOUT: ${TMDB_TIMEOUT:-10s}
+
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_started
+    restart: unless-stopped
+
   prometheus:
-    profiles: [ "monitoring" ]
+    profiles: ["monitoring"]
     image: prom/prometheus:latest
     container_name: movie-tracker-prometheus
     command:
@@ -90,7 +124,7 @@ services:
     restart: unless-stopped
 
   grafana:
-    profiles: [ "monitoring" ]
+    profiles: ["monitoring"]
     image: grafana/grafana:latest
     container_name: movie-tracker-grafana
     environment:
@@ -111,7 +145,7 @@ services:
     restart: unless-stopped
 
   loki:
-    profiles: [ "monitoring" ]
+    profiles: ["monitoring"]
     image: grafana/loki:latest
     container_name: movie-tracker-loki
     command: -config.file=/etc/loki/config.yml
@@ -123,7 +157,7 @@ services:
     restart: unless-stopped
 
   promtail:
-    profiles: [ "monitoring" ]
+    profiles: ["monitoring"]
     image: grafana/promtail:latest
     container_name: movie-tracker-promtail
     command: -config.file=/etc/promtail/config.yml
@@ -140,7 +174,7 @@ services:
     restart: unless-stopped
 
   node-exporter:
-    profiles: [ "monitoring" ]
+    profiles: ["monitoring"]
     image: prom/node-exporter:latest
     container_name: movie-tracker-node-exporter
     command:
@@ -151,7 +185,7 @@ services:
     restart: unless-stopped
 
   nginx-exporter:
-    profiles: [ "monitoring" ]
+    profiles: ["monitoring"]
     image: nginx/nginx-prometheus-exporter:latest
     container_name: movie-tracker-nginx-exporter
     command:
@@ -171,7 +205,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      test:
+        ["CMD-SHELL", 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -197,7 +232,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "if [ -n \"$$REDIS_PASSWORD\" ]; then redis-cli -a \"$$REDIS_PASSWORD\" ping; else redis-cli ping; fi",
+          'if [ -n "$$REDIS_PASSWORD" ]; then redis-cli -a "$$REDIS_PASSWORD" ping; else redis-cli ping; fi',
         ]
       interval: 5s
       timeout: 5s
@@ -210,6 +245,6 @@ volumes:
   loki_data:
   postgres_data:
     external: true
-    name:  movie-tracker-go_postgres_data
+    name: movie-tracker-go_postgres_data
   prometheus_data:
   promtail_positions:

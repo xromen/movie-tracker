@@ -13,6 +13,7 @@ import (
 
 type Config struct {
 	HTTP         HTTPConfig
+	Telegram     TelegramConfig
 	Database     DatabaseConfig
 	TMDB         TMDBConfig
 	JWT          JWTConfig
@@ -25,6 +26,13 @@ type HTTPConfig struct {
 	Port         int
 	ReadTimeout  int
 	WriteTimeout int
+}
+
+type TelegramConfig struct {
+	BotToken           string
+	BotUsername        string
+	BindingTokenTTL    time.Duration
+	TelegramApiBaseUrl string
 }
 
 type DatabaseConfig struct {
@@ -42,6 +50,8 @@ type TMDBConfig struct {
 	ImagesBaseURL string
 	BearerToken   string
 	Timeout       time.Duration
+	RPM           int
+	Burst         int
 }
 
 type JWTConfig struct {
@@ -105,11 +115,27 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("invalid TMDB_TIMEOUT")
 	}
 
+	tmdbRPM, err := strconv.Atoi(getEnv("TMDB_RPM", "4"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid TMDB_RPM: %w", err)
+	}
+
+	tmdbBurst, err := strconv.Atoi(getEnv("TMDB_BURST", "40"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid TMDB_BURST: %w", err)
+	}
+
 	return &Config{
 		HTTP: HTTPConfig{
 			Port:         port,
 			ReadTimeout:  10,
 			WriteTimeout: 10,
+		},
+		Telegram: TelegramConfig{
+			BotToken:           getEnv("TELEGRAM_BOT_TOKEN", ""),
+			BotUsername:        getEnv("TELEGRAM_BOT_USERNAME", ""),
+			BindingTokenTTL:    5 * time.Minute,
+			TelegramApiBaseUrl: getEnv("TELEGRAM_API_BASE_URL", "https://api.telegram.org"),
 		},
 		Database: DatabaseConfig{
 			Host:             getEnv("DB_HOST", "localhost"),
@@ -125,6 +151,8 @@ func Load() (*Config, error) {
 			ImagesBaseURL: getEnv("TMDB_IMAGES_BASE_URL", "https://api.themoviedb.org"),
 			BearerToken:   getEnv("TMDB_BEARER_TOKEN", ""),
 			Timeout:       tmdbTimeout,
+			RPM:           tmdbRPM,
+			Burst:         tmdbBurst,
 		},
 		JWT: JWTConfig{
 			Secret:         getEnv("JWT_SECRET", "change-me-in-production"),

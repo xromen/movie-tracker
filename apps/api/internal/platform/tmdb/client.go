@@ -7,6 +7,7 @@ import (
 	"time"
 
 	gotmdb "github.com/cyruzin/golang-tmdb"
+	"golang.org/x/time/rate"
 
 	"github.com/xromen/movietracker/internal/domain"
 )
@@ -60,6 +61,8 @@ type Config struct {
 	ImagesBaseURL string
 	BearerToken   string
 	Timeout       time.Duration
+	RPM           int
+	Burst         int
 }
 
 type client struct {
@@ -67,6 +70,8 @@ type client struct {
 	imagesBaseURL string
 	timeout       time.Duration
 	transport     http.RoundTripper
+	RPM           int
+	Burst         int
 }
 
 func NewClient(cfg Config) (Client, error) {
@@ -82,6 +87,8 @@ func NewClient(cfg Config) (Client, error) {
 		imagesBaseURL: cfg.ImagesBaseURL,
 		timeout:       cfg.Timeout,
 		transport:     http.DefaultTransport,
+		RPM:           cfg.RPM,
+		Burst:         cfg.Burst,
 	}, nil
 }
 
@@ -91,12 +98,22 @@ func (c *client) requestClient(ctx context.Context) (*gotmdb.Client, error) {
 		return nil, fmt.Errorf("init tmdb request client: %w", err)
 	}
 
+	contextTransport := contextTransport{
+		ctx:  ctx,
+		base: c.transport,
+	}
+
+	limiter := rate.NewLimiter(rate.Limit(c.RPM), c.Burst)
+
+	rateLimitedTransport := &rateLimitedTransport{
+		base:    contextTransport,
+		limiter: limiter,
+		ctx:     ctx,
+	}
+
 	tmdbClient.SetClientConfig(http.Client{
-		Timeout: c.timeout,
-		Transport: contextTransport{
-			ctx:  ctx,
-			base: c.transport,
-		},
+		Timeout:   c.timeout,
+		Transport: rateLimitedTransport,
 	})
 
 	return tmdbClient, nil
@@ -105,6 +122,12 @@ func (c *client) requestClient(ctx context.Context) (*gotmdb.Client, error) {
 type contextTransport struct {
 	ctx  context.Context
 	base http.RoundTripper
+}
+
+type rateLimitedTransport struct {
+	base    http.RoundTripper
+	limiter *rate.Limiter
+	ctx     context.Context
 }
 
 func (t contextTransport) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -119,6 +142,15 @@ func (t contextTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	return base.RoundTrip(req.Clone(ctx))
+}
+
+func (t *rateLimitedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	err := t.limiter.Wait(t.ctx)
+	if err != nil {
+		return nil, fmt.Errorf("rate limit wait: %w", err)
+	}
+
+	return t.base.RoundTrip(req)
 }
 
 func (c *client) getPosterPath(relative string) string {

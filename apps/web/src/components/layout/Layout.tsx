@@ -6,6 +6,7 @@ import LogoutButton from "./LogoutButton"
 import HeaderSearch from "./HeaderSearch"
 import RouteLoadingBar from "./RouteLoadingBar"
 import styles from "./Layout.module.css"
+import TelegramButton from "./TelegramButton"
 
 const Layout = async ({children}: { children: React.ReactNode }) => {
     const session = await getSession()
@@ -47,6 +48,7 @@ const Layout = async ({children}: { children: React.ReactNode }) => {
                                 )}
                                 <div className={styles.logoutContainer}>
                                     {session.username && <p className={styles.username}>{session.username}</p>}
+                                    <TelegramButton/>
                                     <LogoutButton/>
                                 </div>
                             </>
