@@ -1,5 +1,7 @@
 package domain
 
+import "time"
+
 // type Movie struct {
 // 	ID          int64
 // 	Title       string
@@ -39,4 +41,11 @@ type MovieDetail struct {
 	Budget              int64
 	Revenue             int64
 	CollectionID        *int64
+}
+
+type MovieRelease struct {
+	Region        string
+	Type          int
+	ReleaseAt     time.Time
+	Certification string
 }

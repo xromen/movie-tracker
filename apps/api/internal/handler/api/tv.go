@@ -395,14 +395,14 @@ func toEpisodesResponse(result *service.EpisodePageOutput) *pagedTVShowEpisodesR
 	for _, episode := range result.Episodes {
 		episodes = append(episodes, tvShowEpisodeResponse{
 			ID:            episode.ID,
-			ReleaseDate:   episode.ReleaseDate,
+			ReleaseDate:   episode.AirDate,
 			EpisodeNumber: episode.EpisodeNumber,
 			Title:         episode.Title,
 			Overview:      episode.Overview,
 			Runtime:       episode.Runtime,
 			SeasonNumber:  episode.SeasonNumber,
 			TVShowId:      episode.TVShowId,
-			PosterPath:    episode.PosterPath,
+			PosterPath:    episode.StillPath,
 			VoteAverage:   episode.VoteAverage,
 			VoteCount:     episode.VoteCount,
 			IsWatched:     episode.IsWatched,

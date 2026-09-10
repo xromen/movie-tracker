@@ -61,3 +61,9 @@ func (s WatchStatus) IsValid() bool {
 	}
 	return false
 }
+
+type TrackedMedia struct {
+	ID     int64
+	TMDBID int64
+	Type   MediaType
+}

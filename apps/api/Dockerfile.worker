@@ -1,8 +1,6 @@
-# syntax=docker/dockerfile:1.7
-
 FROM golang:1.26.3-alpine AS builder
 
-RUN apk add --no-cache git ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata
 
 WORKDIR /app
 
@@ -11,29 +9,19 @@ RUN go mod download
 
 COPY . .
 
-RUN mkdir -p /app/logs && chown 65534:65534 /app/logs
-
 RUN --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-w -s" \
     -trimpath \
-    -o /app/bin/api \
-    ./cmd/api/
+    -o /app/bin/worker \
+    ./cmd/worker
 
 FROM scratch
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
-
-COPY --from=builder /app/bin/api /api
-
-COPY --from=builder /app/migrations /migrations
-
-COPY --from=builder --chown=65534:65534 /app/logs /var/log/movie-tracker
-
-EXPOSE 8080
+COPY --from=builder --chmod=755 /app/bin/worker /worker
 
 USER 65534:65534
 
-ENTRYPOINT ["/api"]
+ENTRYPOINT ["/worker"]

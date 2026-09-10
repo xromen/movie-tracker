@@ -3,6 +3,7 @@ package tmdb
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/xromen/movietracker/internal/domain"
 )
@@ -291,4 +292,41 @@ func (c *client) GetMovieRecommendations(ctx context.Context, tmdbId int64, page
 		TotalPages: min(int(result.TotalPages), maxTmdbPagesCount),
 		TotalItems: int(result.TotalResults),
 	}, nil
+}
+
+func (c *client) GetMovieReleases(ctx context.Context, tmdbID int64, region string) ([]domain.MovieRelease, error) {
+	tmdbClient, err := c.requestClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := tmdbClient.GetMovieReleaseDates(int(tmdbID))
+	if err != nil {
+		return nil, fmt.Errorf("get movie releases: %w", err)
+	}
+
+	var releases []domain.MovieRelease
+
+	for _, result := range result.Results {
+		if result.Iso3166_1 != region {
+			continue
+		}
+
+		for _, release := range result.ReleaseDates {
+			releasedAt, err := time.Parse(time.RFC3339, release.ReleaseDate)
+			if err != nil {
+				continue
+			}
+			releases = append(releases, domain.MovieRelease{
+				Region:        region,
+				Type:          release.Type,
+				ReleaseAt:     releasedAt,
+				Certification: release.Certification,
+			})
+		}
+
+		break
+	}
+
+	return releases, nil
 }

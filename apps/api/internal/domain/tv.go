@@ -57,15 +57,20 @@ type Season struct {
 
 type Episode struct {
 	ID            int64
-	ReleaseDate   string
+	AirDate       string
 	EpisodeNumber int
 	Title         string
 	Overview      string
 	Runtime       int
 	SeasonNumber  int
 	TVShowId      int64
-	PosterPath    string
+	StillPath     string
 	VoteAverage   float32
 	VoteCount     int64
 	IsWatched     *bool
+}
+
+type TVSchedule struct {
+	Status        string
+	SeasonNumbers []int
 }
