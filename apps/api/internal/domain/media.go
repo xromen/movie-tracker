@@ -1,15 +1,16 @@
 package domain
 
 type Media struct {
-	ID          int64
-	Title       string
-	Overview    string
-	ReleaseDate string
-	PosterPath  string
-	VoteAverage float32
-	VoteCount   int64
-	WatchStatus WatchStatus
-	Type        MediaType
+	ID           int64
+	Title        string
+	Overview     string
+	ReleaseDate  string
+	PosterPath   string
+	VoteAverage  float32
+	VoteCount    int64
+	WatchStatus  WatchStatus
+	Type         MediaType
+	CollectionID *int64
 }
 
 type UserMedia struct {
@@ -63,7 +64,8 @@ func (s WatchStatus) IsValid() bool {
 }
 
 type TrackedMedia struct {
-	ID     int64
-	TMDBID int64
-	Type   MediaType
+	ID           int64
+	TMDBID       int64
+	Type         MediaType
+	CollectionID *int64
 }

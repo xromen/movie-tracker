@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"time"
 
+	tmdb "github.com/cyruzin/golang-tmdb"
 	"github.com/xromen/movietracker/internal/domain"
 )
 
@@ -368,9 +370,21 @@ func (c *client) GetTvSeasonEpisodes(ctx context.Context, tvId int64, seasonNumb
 		// 	}
 		// }
 
+		var airDate *time.Time
+
+		if episode.AirDate != "" {
+			parsedAirDate, err := time.Parse(time.DateOnly, episode.AirDate)
+
+			if err != nil {
+				return nil, fmt.Errorf("get tv episodes failed parse air date %s: %w", episode.AirDate, err)
+			}
+
+			airDate = &parsedAirDate
+		}
+
 		episodes = append(episodes, domain.Episode{
 			ID:            episode.ID,
-			AirDate:       episode.AirDate,
+			AirDate:       airDate,
 			EpisodeNumber: episode.EpisodeNumber,
 			Title:         episode.Name,
 			Overview:      episode.Overview,
@@ -409,8 +423,13 @@ func (c *client) GetTVSchedule(ctx context.Context, tmdbID int64) (*domain.TVSch
 		Status: result.Status,
 	}
 
-	schedule.SeasonNumbers = append(schedule.SeasonNumbers, result.LastEpisodeToAir.SeasonNumber)
-	schedule.SeasonNumbers = append(schedule.SeasonNumbers, result.NextEpisodeToAir.SeasonNumber)
+	if result.LastEpisodeToAir != (tmdb.LastEpisodeToAir{}) {
+		schedule.SeasonNumbers = append(schedule.SeasonNumbers, result.LastEpisodeToAir.SeasonNumber)
+	}
+
+	if result.NextEpisodeToAir != (tmdb.NextEpisodeToAir{}) {
+		schedule.SeasonNumbers = append(schedule.SeasonNumbers, result.NextEpisodeToAir.SeasonNumber)
+	}
 
 	return &schedule, nil
 }

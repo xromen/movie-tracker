@@ -56,15 +56,23 @@ func (c *client) GetMovie(ctx context.Context, tmdbId int64) (*domain.Media, err
 		return nil, fmt.Errorf("get movie: %w", err)
 	}
 
+	var collectionID *int64
+	if result.BelongsToCollection.ID == 0 {
+		collectionID = nil
+	} else {
+		collectionID = &result.BelongsToCollection.ID
+	}
+
 	movie := domain.Media{
-		ID:          result.ID,
-		Title:       result.Title,
-		Overview:    result.Overview,
-		PosterPath:  c.getPosterPath(result.PosterPath),
-		ReleaseDate: result.ReleaseDate,
-		VoteAverage: result.VoteAverage,
-		VoteCount:   result.VoteCount,
-		Type:        domain.MediaTypeMovie,
+		ID:           result.ID,
+		Title:        result.Title,
+		Overview:     result.Overview,
+		PosterPath:   c.getPosterPath(result.PosterPath),
+		ReleaseDate:  result.ReleaseDate,
+		VoteAverage:  result.VoteAverage,
+		VoteCount:    result.VoteCount,
+		Type:         domain.MediaTypeMovie,
+		CollectionID: collectionID,
 	}
 
 	return &movie, nil

@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/xromen/movietracker/internal/domain"
@@ -69,18 +70,18 @@ type pagedTVShowEpisodesResponse struct {
 }
 
 type tvShowEpisodeResponse struct {
-	ID            int64   `json:"id"`
-	ReleaseDate   string  `json:"release_date"`
-	EpisodeNumber int     `json:"episode_number"`
-	Title         string  `json:"title"`
-	Overview      string  `json:"overview"`
-	Runtime       int     `json:"runtime"`
-	SeasonNumber  int     `json:"season_number"`
-	TVShowId      int64   `json:"tv_show_id"`
-	PosterPath    string  `json:"poster_path"`
-	VoteAverage   float32 `json:"vote_average"`
-	VoteCount     int64   `json:"vote_count"`
-	IsWatched     *bool   `json:"is_watched,omitempty"`
+	ID            int64      `json:"id"`
+	ReleaseDate   *time.Time `json:"release_date"`
+	EpisodeNumber int        `json:"episode_number"`
+	Title         string     `json:"title"`
+	Overview      string     `json:"overview"`
+	Runtime       int        `json:"runtime"`
+	SeasonNumber  int        `json:"season_number"`
+	TVShowId      int64      `json:"tv_show_id"`
+	PosterPath    string     `json:"poster_path"`
+	VoteAverage   float32    `json:"vote_average"`
+	VoteCount     int64      `json:"vote_count"`
+	IsWatched     *bool      `json:"is_watched,omitempty"`
 }
 
 type tvShowEpisodeWatchStatusResponse struct {

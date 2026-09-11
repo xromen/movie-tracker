@@ -1,4 +1,4 @@
-package worker
+package main
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/xromen/movietracker/internal/config"
 	"github.com/xromen/movietracker/internal/platform/database"
+	"github.com/xromen/movietracker/internal/platform/logger"
 	"github.com/xromen/movietracker/internal/platform/tmdb"
 	"github.com/xromen/movietracker/internal/repository"
 	"github.com/xromen/movietracker/internal/service"
@@ -17,7 +18,7 @@ import (
 
 func main() {
 	_ = godotenv.Load()
-	
+
 	ctx, stop := signal.NotifyContext(
 		context.Background(),
 		syscall.SIGINT,
@@ -31,9 +32,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	logger, closeLogWriter := logger.CreateLogger(cfg.Logging.FilePath, "worker")
+	defer closeLogWriter()
+
 	pool, err := database.NewPool(ctx, cfg.Database.PoolConfig())
 	if err != nil {
-		slog.Error("failed to connect to database", "error", err)
+		logger.Error("failed to connect to database", "error", err)
 		os.Exit(1)
 	}
 	defer pool.Close()
@@ -47,15 +51,15 @@ func main() {
 		Burst:         cfg.TMDB.Burst,
 	})
 	if err != nil {
-		slog.Error("failed to create TMDB client", "error", err)
+		logger.Error("failed to create TMDB client", "error", err)
 		os.Exit(1)
 	}
 
 	repo := repository.NewWorkerRepository(pool)
-	worker := service.NewWorker(repo, pool, tmdbClient, slog.Default())
+	worker := service.NewWorker(repo, pool, tmdbClient, logger)
 
 	if err := worker.Run(ctx); err != nil {
-		slog.Error("worker stopped", "error", err)
+		logger.Error("worker stopped", "error", err)
 		os.Exit(1)
 	}
 }

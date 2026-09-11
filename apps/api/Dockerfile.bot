@@ -9,6 +9,8 @@ RUN go mod download
 
 COPY . .
 
+RUN mkdir -p /app/logs && chown 65534:65534 /app/logs
+
 RUN --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-w -s" \
@@ -21,6 +23,7 @@ FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /app/bin/bot /bot
+COPY --from=builder --chown=65534:65534 /app/logs /var/log/movie-tracker
 
 USER 65534:65534
 

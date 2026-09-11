@@ -19,6 +19,7 @@ const (
 )
 
 type workerRepository interface {
+	CollectionListDue(ctx context.Context, limit int) ([]int64, error)
 	ListDue(ctx context.Context, limit int) ([]domain.TrackedMedia, error)
 
 	ReplaceMovieReleases(
@@ -28,6 +29,8 @@ type workerRepository interface {
 		releases []domain.MovieRelease,
 	) error
 
+	UpdateMovieCollectionID(ctx context.Context, mediaID int64, collectionID *int64) error
+
 	ReplaceSeasonEpisodes(
 		ctx context.Context,
 		mediaID int64,
@@ -35,8 +38,13 @@ type workerRepository interface {
 		episodes []domain.Episode,
 	) error
 
-	MarkSuccess(ctx context.Context, mediaID int64, nextSync time.Time) error
-	MarkFailure(ctx context.Context, mediaID int64, nextRetry time.Time, message string) error
+	UpsertCollection(ctx context.Context, collection domain.Collection) error
+
+	MarkMediaSuccess(ctx context.Context, mediaID int64, nextSync time.Time) error
+	MarkMediaFailure(ctx context.Context, mediaID int64, nextRetry time.Time, message string) error
+
+	MarkCollectionSuccess(ctx context.Context, collectionID int64, nextSync time.Time) error
+	MarkCollectionFailure(ctx context.Context, collectionID int64, nextRetry time.Time, message string) error
 }
 
 type Worker struct {
@@ -91,13 +99,30 @@ func (w *Worker) runOnce(ctx context.Context) {
 	defer unlock()
 
 	for {
+		items, err := w.repo.CollectionListDue(ctx, batchSize)
+		if err != nil {
+			w.logger.Error("failed to list collection for schedule sync", "error", err)
+			break
+		}
+		if len(items) == 0 {
+			break
+		}
+
+		for _, item := range items {
+			if err := w.syncCollection(ctx, item); err != nil {
+
+			}
+		}
+	}
+
+	for {
 		items, err := w.repo.ListDue(ctx, batchSize)
 		if err != nil {
 			w.logger.Error("failed to list media for schedule sync", "error", err)
-			return
+			break
 		}
 		if len(items) == 0 {
-			return
+			break
 		}
 
 		for _, item := range items {
@@ -110,7 +135,7 @@ func (w *Worker) runOnce(ctx context.Context) {
 					"error", err,
 				)
 
-				_ = w.repo.MarkFailure(
+				_ = w.repo.MarkMediaFailure(
 					ctx,
 					item.ID,
 					time.Now().Add(retryDelay),
@@ -134,10 +159,25 @@ func (w *Worker) syncMedia(ctx context.Context, media domain.TrackedMedia) error
 	}
 }
 
+func (w *Worker) syncCollection(ctx context.Context, id int64) error {
+	collection, err := w.tmdb.GetCollectionDetails(ctx, id)
+	if err != nil {
+		return fmt.Errorf("get collection details: %w", err)
+	}
+
+	if err := w.repo.UpsertCollection(ctx, *collection); err != nil {
+		return fmt.Errorf("save collection: %w", err)
+	}
+
+	nextSync := time.Now().Add(7 * 24 * time.Hour)
+
+	return w.repo.MarkCollectionSuccess(ctx, id, nextSync)
+}
+
 func (w *Worker) syncMovie(ctx context.Context, media domain.TrackedMedia) error {
 	releases, err := w.tmdb.GetMovieReleases(ctx, media.TMDBID, "RU")
 	if err != nil {
-		return fmt.Errorf("get movie releases: %w", err)
+		return fmt.Errorf("sync movie get movie releases: %w", err)
 	}
 
 	if err := w.repo.ReplaceMovieReleases(
@@ -146,17 +186,38 @@ func (w *Worker) syncMovie(ctx context.Context, media domain.TrackedMedia) error
 		"RU",
 		releases,
 	); err != nil {
-		return fmt.Errorf("save movie releases: %w", err)
+		return fmt.Errorf("sync movie save movie releases: %w", err)
+	}
+
+	details, err := w.tmdb.GetMovieDetails(ctx, media.TMDBID)
+	if err != nil {
+		return fmt.Errorf("sync movie get movie details: %w", err)
+	}
+
+	if details.CollectionID != media.CollectionID {
+		if details.CollectionID == nil {
+			err := w.repo.UpdateMovieCollectionID(ctx, media.ID, nil)
+
+			if err != nil {
+				return fmt.Errorf("sync movie update collection id: %w", err)
+			}
+		} else {
+			err := w.syncCollection(ctx, *details.CollectionID)
+
+			if err != nil {
+				return fmt.Errorf("sync movie sync collection: %w", err)
+			}
+		}
 	}
 
 	nextSync := nextMovieSync(time.Now(), releases)
-	return w.repo.MarkSuccess(ctx, media.ID, nextSync)
+	return w.repo.MarkMediaSuccess(ctx, media.ID, nextSync)
 }
 
 func (w *Worker) syncTV(ctx context.Context, media domain.TrackedMedia) error {
 	schedule, err := w.tmdb.GetTVSchedule(ctx, media.TMDBID)
 	if err != nil {
-		return fmt.Errorf("get tv schedule: %w", err)
+		return fmt.Errorf("sync tv get tv schedule: %w", err)
 	}
 
 	for _, seasonNumber := range schedule.SeasonNumbers {
@@ -167,7 +228,7 @@ func (w *Worker) syncTV(ctx context.Context, media domain.TrackedMedia) error {
 			0,
 		)
 		if err != nil {
-			return fmt.Errorf("get season %d: %w", seasonNumber, err)
+			return fmt.Errorf("sync tv get season %d: %w", seasonNumber, err)
 		}
 
 		if err := w.repo.ReplaceSeasonEpisodes(
@@ -176,7 +237,7 @@ func (w *Worker) syncTV(ctx context.Context, media domain.TrackedMedia) error {
 			seasonNumber,
 			episodes.Items,
 		); err != nil {
-			return fmt.Errorf("save season %d: %w", seasonNumber, err)
+			return fmt.Errorf("sync tv save season %d: %w", seasonNumber, err)
 		}
 	}
 
@@ -185,7 +246,7 @@ func (w *Worker) syncTV(ctx context.Context, media domain.TrackedMedia) error {
 		nextSync = time.Now().Add(30 * 24 * time.Hour)
 	}
 
-	return w.repo.MarkSuccess(ctx, media.ID, nextSync)
+	return w.repo.MarkMediaSuccess(ctx, media.ID, nextSync)
 }
 
 func (w *Worker) tryLock(

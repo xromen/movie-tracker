@@ -90,6 +90,7 @@ services:
       TMDB_TIMEOUT: ${TMDB_TIMEOUT:-10s}
 
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      LOG_FILE_PATH: /var/log/movie-tracker/bot.log
     depends_on:
       postgres:
         condition: service_healthy
@@ -120,6 +121,7 @@ services:
       TMDB_TIMEOUT: ${TMDB_TIMEOUT:-10s}
 
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      LOG_FILE_PATH: /var/log/movie-tracker/worker.log
     depends_on:
       postgres:
         condition: service_healthy

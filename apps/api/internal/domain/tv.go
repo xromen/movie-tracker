@@ -1,5 +1,7 @@
 package domain
 
+import "time"
+
 // type TVShow struct {
 // 	ID          int64
 // 	Title       string
@@ -57,7 +59,7 @@ type Season struct {
 
 type Episode struct {
 	ID            int64
-	AirDate       string
+	AirDate       *time.Time
 	EpisodeNumber int
 	Title         string
 	Overview      string
