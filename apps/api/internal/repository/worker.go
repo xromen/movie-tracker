@@ -12,6 +12,7 @@ import (
 type WorkerRepository interface {
 	CollectionListDue(ctx context.Context, limit int) ([]int64, error)
 	ListDue(ctx context.Context, limit int) ([]domain.TrackedMedia, error)
+	ListUsersDueForReport(ctx context.Context, limit int) ([]domain.DueReport, error)
 
 	ReplaceMovieReleases(
 		ctx context.Context,
@@ -36,6 +37,11 @@ type WorkerRepository interface {
 
 	MarkCollectionSuccess(ctx context.Context, collectionID int64, nextSync time.Time) error
 	MarkCollectionFailure(ctx context.Context, collectionID int64, nextRetry time.Time, message string) error
+
+	GetMoviesForReport(ctx context.Context, userID int64, from, to time.Time) ([]domain.ReportMovie, error)
+	GetTvEpisodesForReport(ctx context.Context, userID int64, from, to time.Time) ([]domain.ReportTvEpisode, error)
+
+	CreateReport(ctx context.Context, report domain.Report, messages []string) error
 }
 
 type workerRepository struct {
@@ -124,6 +130,51 @@ func (r *workerRepository) ListDue(ctx context.Context, limit int) ([]domain.Tra
 		}
 
 		result = append(result, media)
+	}
+
+	return result, rows.Err()
+}
+
+func (r *workerRepository) ListUsersDueForReport(ctx context.Context, limit int) ([]domain.DueReport, error) {
+	query := `
+		WITH latest_reports AS (SELECT DISTINCT ON (r.user_id)
+									r.*,
+									r.period_to - r.period_from AS interval
+								FROM reports r
+								ORDER BY r.user_id, r.next_schedule_create_at DESC, r.id)
+		SELECT
+			r.id AS latest_report_id,
+			r.user_id,
+			r.period_from + r.interval AS period_from,
+			r.period_to + r.interval AS period_to,
+			r.interval
+		FROM latest_reports r
+		WHERE r.next_schedule_create_at <= NOW()
+		LIMIT $1;
+	`
+
+	var result []domain.DueReport
+
+	rows, err := r.pool.Query(ctx, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("get users due for report: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var report domain.DueReport
+
+		if err := rows.Scan(
+			&report.LatestReportID,
+			&report.UserID,
+			&report.PeriodFrom,
+			&report.PeriodTo,
+			&report.Interval,
+		); err != nil {
+			return nil, fmt.Errorf("scan user due for report: %w", err)
+		}
+
+		result = append(result, report)
 	}
 
 	return result, rows.Err()
@@ -326,4 +377,152 @@ func (r *workerRepository) MarkCollectionFailure(ctx context.Context, collection
 	`, collectionID, nextRetry, message)
 
 	return err
+}
+
+func (r *workerRepository) GetMoviesForReport(ctx context.Context, userID int64, from, to time.Time) ([]domain.ReportMovie, error) {
+	query := `
+		SELECT DISTINCT ON (m.id)
+			m.id,
+			m.tmdb_id,
+			m.title,
+			m.overview,
+			mr.release_at
+		FROM medias m
+				JOIN movie_releases mr ON m.id = mr.media_id
+		WHERE m.media_type = 'movie'
+		AND mr.release_type IN (3, 4)
+		AND mr.region = 'RU'
+		AND EXISTS (SELECT
+						1
+					FROM user_medias um
+							JOIN medias user_movie ON user_movie.id = um.media_id
+					WHERE um.user_id = $1
+						AND user_movie.media_type = 'movie'
+						AND (user_movie.id = m.id
+						OR (m.collection_tmdb_id IS NOT NULL
+							AND user_movie.collection_tmdb_id = m.collection_tmdb_id)))
+		AND mr.release_at >= $2
+		AND mr.release_at < $3
+		ORDER BY m.id, mr.release_at;
+	`
+
+	var result []domain.ReportMovie
+
+	rows, err := r.pool.Query(ctx, query, userID, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("get movies for user %d report: %w", userID, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var movie domain.ReportMovie
+
+		if err := rows.Scan(
+			&movie.ID,
+			&movie.TMDBID,
+			&movie.Title,
+			&movie.Overview,
+			&movie.ReleaseAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan movies for user %d report: %w", userID, err)
+		}
+
+		result = append(result, movie)
+	}
+
+	return result, rows.Err()
+}
+
+func (r *workerRepository) GetTvEpisodesForReport(ctx context.Context, userID int64, from, to time.Time) ([]domain.ReportTvEpisode, error) {
+	query := `
+		SELECT
+			m.id,
+			m.tmdb_id,
+			m.title AS series_title,
+			m.overview AS series_overview,
+			te.season_number,
+			te.episode_number,
+			te.title AS episode_title,
+			te.overview AS episode_overview,
+			te.air_date AS episode_air_date
+		FROM medias m
+				JOIN tv_episodes te ON m.id = te.media_id
+				JOIN user_medias um ON m.id = um.media_id
+		WHERE te.air_date >= $2
+		  AND te.air_date < $3
+		  AND um.user_id = $1;
+	`
+
+	var result []domain.ReportTvEpisode
+
+	rows, err := r.pool.Query(ctx, query, userID, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("get tv episodes for user %d report: %w", userID, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var episode domain.ReportTvEpisode
+
+		if err := rows.Scan(
+			&episode.ID,
+			&episode.TMDBID,
+			&episode.SeriesTitle,
+			&episode.SeriesOverview,
+			&episode.SeasonNumber,
+			&episode.EpisodeNumber,
+			&episode.EpisodeTitle,
+			&episode.EpisodeOverview,
+			&episode.EpisodeAirDate,
+		); err != nil {
+			return nil, fmt.Errorf("scan tv episodes for user %d report: %w", userID, err)
+		}
+
+		result = append(result, episode)
+	}
+
+	return result, rows.Err()
+}
+
+func (r *workerRepository) CreateReport(ctx context.Context, report domain.Report, messages []string) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("create report begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var reportID int64
+
+	err = tx.QueryRow(ctx, `
+		INSERT INTO reports(user_id, period_from, period_to, next_schedule_create_at)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id;
+	`,
+		report.UserID,
+		report.PeriodFrom,
+		report.PeriodTo,
+		report.NextScheduleCreateAt,
+	).Scan(&reportID)
+
+	for position, message := range messages {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO report_messages(report_id, message, position)
+			VALUES ($1, $2, $3);
+		`,
+			reportID,
+			message,
+			position,
+		)
+
+		if err != nil {
+			return fmt.Errorf("add message to report: %w", err)
+		}
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("create report transaction commit: %w", err)
+	}
+
+	return nil
 }

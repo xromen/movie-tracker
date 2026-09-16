@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -15,6 +16,7 @@ import (
 	"github.com/xromen/movietracker/internal/platform/logger"
 	"github.com/xromen/movietracker/internal/repository"
 	"github.com/xromen/movietracker/internal/service"
+	"golang.org/x/sync/errgroup"
 )
 
 func main() {
@@ -68,11 +70,35 @@ func main() {
 		os.Exit(1)
 	}
 
+	telegramWorker := service.NewTelegramWorker(telegramRepo, logger, tgBot)
+
 	botHandlers.Register(tgBot)
 
-	logger.Info("telegram bot started")
+	group, runCtx := errgroup.WithContext(ctx)
 
-	tgBot.Start(ctx)
+	group.Go(func() error {
+		tgBot.Start(runCtx)
 
-	logger.Info("telegram bot stopped")
+		if runCtx.Err() == nil {
+			return errors.New("telegram bot stopped unexpectedly")
+		}
+
+		return nil
+	})
+
+	group.Go(func() error {
+		return telegramWorker.Run(runCtx)
+	})
+
+	logger.Info("telegram bot and worker started")
+
+	if err := group.Wait(); err != nil &&
+		!errors.Is(err, context.Canceled) {
+		logger.Error(
+			"telegram bot or worker stopped",
+			"error", err,
+		)
+	}
+
+	logger.Info("telegram bot and worker stopped")
 }

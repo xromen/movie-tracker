@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 	"github.com/xromen/movietracker/internal/domain"
 )
 
@@ -22,11 +24,19 @@ type TelegramService interface {
 	GenerateBindingUrl(ctx context.Context, userID int64) (*BindingUrlOutput, error)
 }
 
+type TelegramWorker interface {
+	Run(ctx context.Context) error
+}
+
 type telegramRepository interface {
 	CreateBindingToken(ctx context.Context, token *domain.BindingToken) error
 	GetBindingToken(ctx context.Context, userID int64) (*domain.BindingToken, error)
 	GetUserByBindingToken(ctx context.Context, code string) (*domain.User, error)
 	SetTelegramID(ctx context.Context, userID, telegramID int64) error
+
+	GetDueReportMessages(ctx context.Context, limit int) ([]domain.DueReportMessage, error)
+	MarkMessageSuccess(ctx context.Context, messageID, telegramMessageID int64) error
+	MarkMessageFailure(ctx context.Context, messageID int64, nextRetry time.Time, error string) error
 }
 
 type telegramService struct {
@@ -34,6 +44,12 @@ type telegramService struct {
 	repo            telegramRepository
 	botUserName     string
 	bindingTokenTTL time.Duration
+}
+
+type telegramWorker struct {
+	logger *slog.Logger
+	repo   telegramRepository
+	bot    *bot.Bot
 }
 
 type BindingUrlOutput struct {
@@ -55,6 +71,33 @@ func NewTelegramService(repo telegramRepository, logger *slog.Logger, config Tel
 		repo:            repo,
 		botUserName:     config.BotUserName,
 		bindingTokenTTL: config.BindingTokenTTL,
+	}
+}
+
+func NewTelegramWorker(repo telegramRepository, logger *slog.Logger, bot *bot.Bot) TelegramWorker {
+	return &telegramWorker{
+		logger: logger,
+		repo:   repo,
+		bot:    bot,
+	}
+}
+
+func (w *telegramWorker) Run(ctx context.Context) error {
+	w.logger.Info("telegram worker started")
+
+	w.runOnce(ctx)
+
+	ticker := time.NewTicker(pollInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+
+		case <-ticker.C:
+			w.runOnce(ctx)
+		}
 	}
 }
 
@@ -106,4 +149,30 @@ func (s *telegramService) GenerateBindingUrl(ctx context.Context, userID int64) 
 		ExpiresAt: token.ExpiresAt,
 		CreatedAt: token.CreatedAt,
 	}, nil
+}
+
+func (w *telegramWorker) runOnce(ctx context.Context) {
+	for {
+		messages, err := w.repo.GetDueReportMessages(ctx, batchSize)
+		if err != nil {
+			w.logger.Error("failed to get due report messages", "error", err)
+			return
+		}
+
+		if len(messages) == 0 {
+			return
+		}
+
+		for _, message := range messages {
+			if telegramMessage, err := w.bot.SendMessage(ctx, &bot.SendMessageParams{
+				ChatID:    message.UserTelegramID,
+				Text:      message.Message,
+				ParseMode: models.ParseModeHTML,
+			}); err != nil {
+				_ = w.repo.MarkMessageFailure(ctx, message.ID, time.Now().Add(retryDelay), err.Error())
+			} else {
+				_ = w.repo.MarkMessageSuccess(ctx, message.ID, int64(telegramMessage.ID))
+			}
+		}
+	}
 }

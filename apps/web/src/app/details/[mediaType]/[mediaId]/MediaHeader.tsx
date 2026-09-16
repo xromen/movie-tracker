@@ -59,6 +59,8 @@ const MediaHeader = async (props: MediaHeaderProps) => {
     const session = await getSession()
     const watchStatus = session.isAuthenticated ? await getWatchStatus(props.id, props.type) : null
 
+    const shouldShowRating = props.voteAverage !== undefined && props.voteAverage !== null && props.voteAverage !== 0
+
     return (
         <div className={styles.mainContainer}>
             <div className={styles.posterContainer}>
@@ -89,12 +91,14 @@ const MediaHeader = async (props: MediaHeaderProps) => {
                             <td>Оригинальное название</td>
                             <td>{props.originalTitle}</td>
                         </tr>
-                        <tr>
-                            <td>Оценка</td>
-                            <td>
-                                <Rating voteAverage={props.voteAverage} voteCount={props.voteCount} />
-                            </td>
-                        </tr>
+                        {shouldShowRating && (
+                            <tr>
+                                <td>Оценка</td>
+                                <td>
+                                    <Rating voteAverage={props.voteAverage} voteCount={props.voteCount} />
+                                </td>
+                            </tr>
+                        )}
                         {props.releaseDate && (
                             <tr>
                                 <td>Дата выхода</td>

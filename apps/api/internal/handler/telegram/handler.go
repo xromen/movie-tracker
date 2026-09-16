@@ -38,6 +38,20 @@ func (h *Handlers) Register(b *bot.Bot) {
 		bot.MatchTypeCommand,
 		h.Help,
 	)
+
+	// b.SetMyCommands(ctx, &bot.SetMyCommandsParams{
+	// 	Commands: []models.BotCommand{
+	// 		{
+	// 			Command:     "start",
+	// 			Description: "Начать работу",
+	// 		},
+	// 		{
+	// 			Command:     "help",
+	// 			Description: "Помощь",
+	// 		},
+	// 	},
+	// 	LanguageCode: "ru",
+	// })
 }
 
 func (h *Handlers) Default(

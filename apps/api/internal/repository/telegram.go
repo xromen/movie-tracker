@@ -16,6 +16,10 @@ type TelegramRepository interface {
 	GetBindingToken(ctx context.Context, userID int64) (*domain.BindingToken, error)
 	GetUserByBindingToken(ctx context.Context, token string) (*domain.User, error)
 	SetTelegramID(ctx context.Context, userID, telegramID int64) error
+
+	GetDueReportMessages(ctx context.Context, limit int) ([]domain.DueReportMessage, error)
+	MarkMessageSuccess(ctx context.Context, messageID, telegramMessageID int64) error
+	MarkMessageFailure(ctx context.Context, messageID int64, nextRetry time.Time, error string) error
 }
 
 type telegramRepository struct {
@@ -138,4 +142,81 @@ func (r *telegramRepository) GetBindingToken(ctx context.Context, userID int64) 
 	}
 
 	return &bindingToken, nil
+}
+
+func (r *telegramRepository) GetDueReportMessages(ctx context.Context, limit int) ([]domain.DueReportMessage, error) {
+	query := `
+		SELECT
+			rm.id,
+			u.telegram_id,
+			rm.message,
+			rm.position
+		FROM report_messages rm
+				JOIN reports r ON rm.report_id = r.id
+				JOIN users u ON r.user_id = u.id
+		WHERE rm.sent_at IS NULL
+		AND rm.next_attempt_at <= NOW()
+		ORDER BY u.id, rm.position
+		LIMIT $1;
+	`
+
+	var result []domain.DueReportMessage
+
+	rows, err := r.pool.Query(ctx, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("get due report messages: %w")
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var message domain.DueReportMessage
+		err := rows.Scan(
+			&message.ID,
+			&message.UserTelegramID,
+			&message.Message,
+			&message.Position,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan report message: %w", err)
+		}
+
+		result = append(result, message)
+	}
+
+	return result, rows.Err()
+}
+
+func (r *telegramRepository) MarkMessageSuccess(ctx context.Context, messageID, telegramMessageID int64) error {
+	_, err := r.pool.Exec(ctx, `
+		UPDATE report_messages
+		SET sent_at = NOW(),
+			telegram_message_id = $2
+		WHERE id = $1;
+	`, messageID, telegramMessageID)
+
+	if err != nil {
+		return fmt.Errorf("mark message success: %w", err)
+	}
+
+	return nil
+}
+
+func (r *telegramRepository) MarkMessageFailure(ctx context.Context, messageID int64, nextRetry time.Time, error string) error {
+	_, err := r.pool.Exec(ctx, `
+		UPDATE report_messages
+		SET attempts        = attempts + 1,
+			next_attempt_at = $2,
+			last_error      = $3
+		WHERE id = $1;
+	`,
+		messageID,
+		nextRetry,
+		error,
+	)
+
+	if err != nil {
+		return fmt.Errorf("mark message failure: %w", err)
+	}
+
+	return nil
 }

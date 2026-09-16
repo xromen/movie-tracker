@@ -39,14 +39,16 @@ func (r *mediaRepository) Upsert(ctx context.Context, media *domain.Media) error
 	}
 	defer tx.Rollback(ctx)
 
-	_, err = tx.Exec(ctx, `
-		INSERT INTO movie_collections(tmdb_id)
-		VALUES ($1)
-		ON CONFLICT DO NOTHING;
-	`, media.CollectionID)
+	if media.CollectionID != nil {
+		_, err = tx.Exec(ctx, `
+			INSERT INTO movie_collections(tmdb_id)
+			VALUES ($1)
+			ON CONFLICT DO NOTHING;
+		`, media.CollectionID)
 
-	if err != nil {
-		return fmt.Errorf("upsert media insert collection: %w", err)
+		if err != nil {
+			return fmt.Errorf("upsert media insert collection: %w", err)
+		}
 	}
 
 	query := `

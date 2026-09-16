@@ -171,7 +171,7 @@ const SeasonItem = ({ tvId, season, isAuthenticated }: { tvId: number; season: S
           {season.overview && <span className={styles.seasonOverview}>{season.overview}</span>}
         </div>
 
-        {isAuthenticated && seasonWatched !== undefined && (
+        {isAuthenticated && seasonWatched !== undefined && season.episodeCount != 0 && (
           <button
             type="button"
             className={`${styles.watchedToggle} ${seasonWatched ? styles.watchedToggleActive : ""}`}
@@ -222,7 +222,7 @@ const SeasonItem = ({ tvId, season, isAuthenticated }: { tvId: number; season: S
                   )}
                   {episode.releaseDate && <span className={styles.metaItem}>{episode.releaseDate.toLocaleDateString("ru")}</span>}
                 </div>
-                {episode.overview && <p>{episode.overview}</p>}
+                {episode.overview && <p className={styles.episodeOverview}>{episode.overview}</p>}
               </div>
             </div>
           ))}

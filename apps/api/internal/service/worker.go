@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html"
 	"log/slog"
+	"strings"
 	"time"
+	"unicode/utf16"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/xromen/movietracker/internal/domain"
@@ -13,14 +16,16 @@ import (
 )
 
 const (
-	batchSize    = 100
-	retryDelay   = time.Hour
-	pollInterval = time.Hour
+	batchSize            = 100
+	retryDelay           = time.Hour
+	pollInterval         = time.Hour
+	telegramMessageLimit = 3500
 )
 
 type workerRepository interface {
 	CollectionListDue(ctx context.Context, limit int) ([]int64, error)
 	ListDue(ctx context.Context, limit int) ([]domain.TrackedMedia, error)
+	ListUsersDueForReport(ctx context.Context, limit int) ([]domain.DueReport, error)
 
 	ReplaceMovieReleases(
 		ctx context.Context,
@@ -45,6 +50,11 @@ type workerRepository interface {
 
 	MarkCollectionSuccess(ctx context.Context, collectionID int64, nextSync time.Time) error
 	MarkCollectionFailure(ctx context.Context, collectionID int64, nextRetry time.Time, message string) error
+
+	GetMoviesForReport(ctx context.Context, userID int64, from, to time.Time) ([]domain.ReportMovie, error)
+	GetTvEpisodesForReport(ctx context.Context, userID int64, from, to time.Time) ([]domain.ReportTvEpisode, error)
+
+	CreateReport(ctx context.Context, report domain.Report, messages []string) error
 }
 
 type Worker struct {
@@ -108,9 +118,14 @@ func (w *Worker) runOnce(ctx context.Context) {
 			break
 		}
 
-		for _, item := range items {
-			if err := w.syncCollection(ctx, item); err != nil {
-
+		for _, collectionID := range items {
+			if err := w.syncCollection(ctx, collectionID); err != nil {
+				_ = w.repo.MarkCollectionFailure(
+					ctx,
+					collectionID,
+					time.Now().Add(retryDelay),
+					err.Error(),
+				)
 			}
 		}
 	}
@@ -140,6 +155,27 @@ func (w *Worker) runOnce(ctx context.Context) {
 					item.ID,
 					time.Now().Add(retryDelay),
 					err.Error(),
+				)
+			}
+		}
+	}
+
+	for {
+		items, err := w.repo.ListUsersDueForReport(ctx, batchSize)
+		if err != nil {
+			w.logger.Error("failed to get users due for report", "error", err)
+			break
+		}
+		if len(items) == 0 {
+			break
+		}
+
+		for _, item := range items {
+			if err := w.createReport(ctx, item); err != nil {
+				w.logger.Warn(
+					"failed to create report",
+					"user_id", item.UserID,
+					"error", err,
 				)
 			}
 		}
@@ -249,6 +285,39 @@ func (w *Worker) syncTV(ctx context.Context, media domain.TrackedMedia) error {
 	return w.repo.MarkMediaSuccess(ctx, media.ID, nextSync)
 }
 
+func (w *Worker) createReport(ctx context.Context, report domain.DueReport) error {
+	interval := report.PeriodTo.Sub(report.PeriodFrom)
+	periodFuture := report.PeriodTo.Add(interval)
+
+	moviesForReport, err := w.repo.GetMoviesForReport(ctx, report.UserID, report.PeriodFrom, periodFuture)
+	if err != nil {
+		return fmt.Errorf("get movies for report: %w", err)
+	}
+
+	episodesForReport, err := w.repo.GetTvEpisodesForReport(ctx, report.UserID, report.PeriodFrom, periodFuture)
+	if err != nil {
+		return fmt.Errorf("get episodes for report: %w")
+	}
+
+	messages := buildReportMessages(report.PeriodFrom, report.PeriodTo, periodFuture, moviesForReport, episodesForReport)
+
+	err = w.repo.CreateReport(
+		ctx,
+		domain.Report{
+			UserID:               report.UserID,
+			PeriodFrom:           report.PeriodFrom,
+			PeriodTo:             report.PeriodTo,
+			NextScheduleCreateAt: time.Now().Add(interval),
+		},
+		messages,
+	)
+	if err != nil {
+		return fmt.Errorf("create report: %w", err)
+	}
+
+	return nil
+}
+
 func (w *Worker) tryLock(
 	ctx context.Context,
 ) (unlock func(), acquired bool, err error) {
@@ -300,4 +369,135 @@ func nextMovieSync(now time.Time, releases []domain.MovieRelease) time.Time {
 	}
 
 	return now.Add(30 * 24 * time.Hour)
+}
+
+func buildReportMessages(
+	periodFrom time.Time,
+	periodTo time.Time,
+	futureTo time.Time,
+	movies []domain.ReportMovie,
+	episodes []domain.ReportTvEpisode,
+) []string {
+	if len(movies) == 0 && len(episodes) == 0 {
+		return nil
+	}
+
+	blocks := []string{
+		fmt.Sprintf(
+			"🎬 <b>Киноотчёт</b>\n\n"+
+				"📌 Вышло: %s–%s\n"+
+				"🔭 Ожидается: %s–%s",
+			periodFrom.Format("02.01"),
+			periodTo.Format("02.01"),
+			periodTo.Format("02.01"),
+			futureTo.Format("02.01"),
+		),
+	}
+
+	appendSection := func(heading string, items []string) {
+		if len(items) == 0 {
+			return
+		}
+
+		blocks = append(blocks, heading+"\n"+items[0])
+		blocks = append(blocks, items[1:]...)
+	}
+
+	var releasedMovies []string
+	var upcomingMovies []string
+
+	for _, movie := range movies {
+		line := fmt.Sprintf(
+			"• <b>%s</b> — %s",
+			html.EscapeString(movie.Title),
+			movie.ReleaseAt.Format("02.01.2006"),
+		)
+
+		if movie.ReleaseAt.Before(periodTo) {
+			releasedMovies = append(releasedMovies, line)
+		} else {
+			upcomingMovies = append(upcomingMovies, line)
+		}
+	}
+
+	appendSection(
+		"🍿 <b>Вышедшие фильмы</b>",
+		releasedMovies,
+	)
+	appendSection(
+		"📅 <b>Предстоящие фильмы</b>",
+		upcomingMovies,
+	)
+
+	var releasedEpisodes []string
+	var upcomingEpisodes []string
+
+	for _, episode := range episodes {
+		episodeString := fmt.Sprintf(
+			"S%02dE%02d",
+			episode.SeasonNumber,
+			episode.EpisodeNumber,
+		)
+
+		if episode.EpisodeTitle != "" {
+			episodeString += fmt.Sprintf(
+				" «%s»",
+				html.EscapeString(episode.EpisodeTitle),
+			)
+		}
+
+		line := fmt.Sprintf(
+			"• <b>%s</b> — %s — %s",
+			html.EscapeString(episode.SeriesTitle),
+			episodeString,
+			episode.EpisodeAirDate.Format("02.01.2006"),
+		)
+
+		if episode.EpisodeAirDate.Before(periodTo) {
+			releasedEpisodes = append(releasedEpisodes, line)
+		} else {
+			upcomingEpisodes = append(upcomingEpisodes, line)
+		}
+	}
+
+	appendSection(
+		"🆕 <b>Вышедшие серии</b>",
+		releasedEpisodes,
+	)
+	appendSection(
+		"⏳ <b>Предстоящие серии</b>",
+		upcomingEpisodes,
+	)
+
+	return splitReportMessages(blocks)
+}
+
+func splitReportMessages(blocks []string) []string {
+	var messages []string
+	var message strings.Builder
+
+	for _, block := range blocks {
+		separator := ""
+		if message.Len() > 0 {
+			separator = "\n\n"
+		}
+
+		if telegramTextLength(message.String()+separator+block) > telegramMessageLimit {
+			messages = append(messages, message.String())
+			message.Reset()
+			message.WriteString("🎬 <b>Киноотчёт — продолжение</b>\n\n")
+		}
+
+		message.WriteString(separator + block)
+	}
+
+	if message.Len() > 0 {
+		messages = append(messages, message.String())
+	}
+
+	return messages
+}
+
+func telegramTextLength(value string) int {
+	return len(utf16.Encode([]rune(value)))
 }
