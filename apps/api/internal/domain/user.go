@@ -11,4 +11,5 @@ type User struct {
 	AuthVersion  int64
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+	TelegramId   int64
 }

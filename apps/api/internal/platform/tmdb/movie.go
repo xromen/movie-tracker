@@ -3,6 +3,7 @@ package tmdb
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/xromen/movietracker/internal/domain"
 )
@@ -55,15 +56,23 @@ func (c *client) GetMovie(ctx context.Context, tmdbId int64) (*domain.Media, err
 		return nil, fmt.Errorf("get movie: %w", err)
 	}
 
+	var collectionID *int64
+	if result.BelongsToCollection.ID == 0 {
+		collectionID = nil
+	} else {
+		collectionID = &result.BelongsToCollection.ID
+	}
+
 	movie := domain.Media{
-		ID:          result.ID,
-		Title:       result.Title,
-		Overview:    result.Overview,
-		PosterPath:  c.getPosterPath(result.PosterPath),
-		ReleaseDate: result.ReleaseDate,
-		VoteAverage: result.VoteAverage,
-		VoteCount:   result.VoteCount,
-		Type:        domain.MediaTypeMovie,
+		ID:           result.ID,
+		Title:        result.Title,
+		Overview:     result.Overview,
+		PosterPath:   c.getPosterPath(result.PosterPath),
+		ReleaseDate:  result.ReleaseDate,
+		VoteAverage:  result.VoteAverage,
+		VoteCount:    result.VoteCount,
+		Type:         domain.MediaTypeMovie,
+		CollectionID: collectionID,
 	}
 
 	return &movie, nil
@@ -291,4 +300,41 @@ func (c *client) GetMovieRecommendations(ctx context.Context, tmdbId int64, page
 		TotalPages: min(int(result.TotalPages), maxTmdbPagesCount),
 		TotalItems: int(result.TotalResults),
 	}, nil
+}
+
+func (c *client) GetMovieReleases(ctx context.Context, tmdbID int64, region string) ([]domain.MovieRelease, error) {
+	tmdbClient, err := c.requestClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := tmdbClient.GetMovieReleaseDates(int(tmdbID))
+	if err != nil {
+		return nil, fmt.Errorf("get movie releases: %w", err)
+	}
+
+	var releases []domain.MovieRelease
+
+	for _, result := range result.Results {
+		if result.Iso3166_1 != region {
+			continue
+		}
+
+		for _, release := range result.ReleaseDates {
+			releasedAt, err := time.Parse(time.RFC3339, release.ReleaseDate)
+			if err != nil {
+				continue
+			}
+			releases = append(releases, domain.MovieRelease{
+				Region:        region,
+				Type:          release.Type,
+				ReleaseAt:     releasedAt,
+				Certification: release.Certification,
+			})
+		}
+
+		break
+	}
+
+	return releases, nil
 }

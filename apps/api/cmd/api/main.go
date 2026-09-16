@@ -4,12 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -20,11 +18,12 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/joho/godotenv"
 	"github.com/xromen/movietracker/internal/config"
-	"github.com/xromen/movietracker/internal/handler"
+	handler "github.com/xromen/movietracker/internal/handler/api"
 	"github.com/xromen/movietracker/internal/platform/cache"
 	"github.com/xromen/movietracker/internal/platform/database"
 	"github.com/xromen/movietracker/internal/platform/hasher"
 	"github.com/xromen/movietracker/internal/platform/jwt"
+	"github.com/xromen/movietracker/internal/platform/logger"
 	"github.com/xromen/movietracker/internal/platform/metrics"
 	"github.com/xromen/movietracker/internal/platform/refreshtoken"
 	"github.com/xromen/movietracker/internal/platform/tmdb"
@@ -43,18 +42,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	logWriter, closeLogWriter, err := createLogWriter(cfg.Logging.FilePath)
-	if err != nil {
-		slog.Error("failed to initialize logger", "error", err)
-		os.Exit(1)
-	}
+	log, closeLogWriter := logger.CreateLogger(cfg.Logging.FilePath, "api")
 	defer closeLogWriter()
 
-	logger := slog.New(slog.NewJSONHandler(logWriter, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-	}))
-
-	slog.SetDefault(logger)
+	slog.SetDefault(log)
 
 	ctx, stop := signal.NotifyContext(context.Background(),
 		syscall.SIGINT,
@@ -116,8 +107,8 @@ func main() {
 
 	userRepo := repository.NewUserRepository(pool)
 	refreshTokenRepo := repository.NewRefreshTokenRepository(pool)
-	userService := service.NewUserService(userRepo, refreshTokenRepo, bcryptHasher, jwtManager, refreshTokenManager, logger)
-	userHandler := handler.NewUserHandler(userService, logger)
+	userService := service.NewUserService(userRepo, refreshTokenRepo, bcryptHasher, jwtManager, refreshTokenManager, log)
+	userHandler := handler.NewUserHandler(userService, log)
 
 	mediaRepo := repository.NewMediaRepository(pool)
 
@@ -126,26 +117,35 @@ func main() {
 		BearerToken:   cfg.TMDB.BearerToken,
 		ImagesBaseURL: cfg.TMDB.ImagesBaseURL,
 		Timeout:       cfg.TMDB.Timeout,
+		RPM:           cfg.TMDB.RPM,
+		Burst:         cfg.TMDB.Burst,
 	})
 	if err != nil {
 		slog.Error("failed to connect to TMDB", "error", err)
 		os.Exit(1)
 	}
 
-	movieService := service.NewMovieService(mediaRepo, tmdbClient, redisCache, logger)
-	movieHandler := handler.NewMovieHandler(movieService, logger)
+	movieService := service.NewMovieService(mediaRepo, tmdbClient, redisCache, log)
+	movieHandler := handler.NewMovieHandler(movieService, log)
 
-	tvShowService := service.NewTVShowService(mediaRepo, tmdbClient, redisCache, logger)
-	tvShowHandler := handler.NewTVShowHandler(tvShowService, logger)
+	tvShowService := service.NewTVShowService(mediaRepo, tmdbClient, redisCache, log)
+	tvShowHandler := handler.NewTVShowHandler(tvShowService, log)
 
-	watchListService := service.NewWatchListService(mediaRepo, tmdbClient, redisCache, logger)
-	watchListHandler := handler.NewWatchListHandler(watchListService, logger)
+	watchListService := service.NewWatchListService(mediaRepo, tmdbClient, redisCache, log)
+	watchListHandler := handler.NewWatchListHandler(watchListService, log)
 
-	collectionService := service.NewCollectionService(tmdbClient, mediaRepo, redisCache, logger)
-	collectionHandler := handler.NewCollectionHandler(collectionService, logger)
+	collectionService := service.NewCollectionService(tmdbClient, mediaRepo, redisCache, log)
+	collectionHandler := handler.NewCollectionHandler(collectionService, log)
 
-	searchService := service.NewSearchService(tmdbClient, redisCache, logger)
-	searchHandler := handler.NewSearchHandler(searchService, logger)
+	searchService := service.NewSearchService(tmdbClient, redisCache, log)
+	searchHandler := handler.NewSearchHandler(searchService, log)
+
+	telegramRepo := repository.NewTelegramRepository(pool)
+	telegramService := service.NewTelegramService(telegramRepo, log, service.TelegramConfig{
+		BotUserName:     cfg.Telegram.BotUsername,
+		BindingTokenTTL: cfg.Telegram.BindingTokenTTL,
+	})
+	telegramHandler := handler.NewTelegramHandler(telegramService, log)
 
 	router := setupRouter(
 		cfg,
@@ -158,6 +158,7 @@ func main() {
 		watchListHandler,
 		collectionHandler,
 		searchHandler,
+		telegramHandler,
 	)
 
 	srv := &http.Server{
@@ -218,11 +219,12 @@ func setupRouter(
 	watchListHandler *handler.WatchListHandler,
 	collectionHandler *handler.CollectionHandler,
 	searchHandler *handler.SearchHandler,
+	telegramHandler *handler.TelegramHandler,
 ) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(handler.TraceID())
-	router.Use(handler.StructuredLogger(logger()))
+	router.Use(handler.StructuredLogger(slog.Default()))
 
 	httpMetrics := metrics.NewHTTPMetrics()
 	router.Use(httpMetrics.Middleware())
@@ -255,16 +257,16 @@ func setupRouter(
 		MaxAge: 12 * time.Hour,
 	}))
 
-	api := router.Group("/api")
+	apiRoute := router.Group("/api")
 
 	adminRole := "admin"
-	health := api.Group("/health")
+	health := apiRoute.Group("/health")
 	{
 		health.GET("/live", healthHandler.Live)
 		health.GET("/ready", handler.AuthMiddleware(jwtManager, userService, &adminRole), healthHandler.Ready)
 	}
 
-	v1 := api.Group("/v1")
+	v1 := apiRoute.Group("/v1")
 
 	auth := v1.Group("/auth")
 	{
@@ -346,48 +348,12 @@ func setupRouter(
 		}
 	}
 
+	{
+		telegram := protected.Group("/telegram")
+		{
+			telegram.GET("binding-url", telegramHandler.GenerateBindingUrl)
+		}
+	}
+
 	return router
-}
-
-func structuredLogger(log *slog.Logger) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		start := time.Now()
-		path := c.Request.URL.Path
-
-		c.Next()
-
-		latency := time.Since(start)
-		statusCode := c.Writer.Status()
-
-		log.Info("request",
-			"method", c.Request.Method,
-			"path", path,
-			"status", statusCode,
-			"latency_ms", latency.Milliseconds(),
-			"ip", c.ClientIP(),
-		)
-	}
-}
-
-func logger() *slog.Logger {
-	return slog.Default()
-}
-
-func createLogWriter(filePath string) (io.Writer, func(), error) {
-	if filePath == "" {
-		return os.Stdout, func() {}, nil
-	}
-
-	if err := os.MkdirAll(filepath.Dir(filePath), 0o755); err != nil {
-		return nil, nil, err
-	}
-
-	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return io.MultiWriter(os.Stdout, file), func() {
-		_ = file.Close()
-	}, nil
 }

@@ -200,7 +200,7 @@ func (s *watchListService) SetMediaUserStatus(ctx context.Context, input SetMedi
 		media, err = s.mediaRepo.GetByTmdbID(ctx, input.MediaID, input.MediaType)
 
 		if err != nil {
-			return nil, fmt.Errorf("get media from tmdb: %w", err)
+			return nil, fmt.Errorf("get media from repo: %w", err)
 		}
 	}
 

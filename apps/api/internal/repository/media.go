@@ -33,17 +33,36 @@ func NewMediaRepository(pool *pgxpool.Pool) MediaRepository {
 }
 
 func (r *mediaRepository) Upsert(ctx context.Context, media *domain.Media) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("upsert media begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if media.CollectionID != nil {
+		_, err = tx.Exec(ctx, `
+			INSERT INTO movie_collections(tmdb_id)
+			VALUES ($1)
+			ON CONFLICT DO NOTHING;
+		`, media.CollectionID)
+
+		if err != nil {
+			return fmt.Errorf("upsert media insert collection: %w", err)
+		}
+	}
+
 	query := `
-		INSERT INTO medias (tmdb_id, title, overview, poster_path, release_date, media_type, vote_average)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO medias (tmdb_id, title, overview, poster_path, release_date, media_type, vote_average, collection_tmdb_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT(tmdb_id, media_type) DO UPDATE SET
 										 title = EXCLUDED.title,
 										 overview = EXCLUDED.overview,
 										 poster_path = EXCLUDED.poster_path,
+										 collection_tmdb_id = EXCLUDED.collection_tmdb_id,
 										 updated_at = NOW()
 	`
 
-	_, err := r.pool.Exec(ctx, query,
+	_, err = tx.Exec(ctx, query,
 		media.ID,
 		media.Title,
 		media.Overview,
@@ -51,10 +70,15 @@ func (r *mediaRepository) Upsert(ctx context.Context, media *domain.Media) error
 		media.ReleaseDate,
 		media.Type,
 		media.VoteAverage,
+		media.CollectionID,
 	)
 
 	if err != nil {
 		return fmt.Errorf("upsert media: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("upsert media commit transaction: %w", err)
 	}
 
 	return nil

@@ -60,6 +60,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*domain.
 			u.created_at,
 			u.updated_at,
 			u.auth_version,
+			u.telegram_id,
 			COALESCE(
 				ARRAY_AGG(r.name) FILTER (WHERE r.name IS NOT NULL),
 				'{}'::text[]
@@ -73,7 +74,8 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*domain.
 				u.username,
 				u.created_at,
 				u.updated_at,
-				u.auth_version;
+				u.auth_version,
+				u.telegram_id;
     `
 
 	user := &domain.User{}
@@ -85,6 +87,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*domain.
 		&user.CreatedAt,
 		&user.UpdatedAt,
 		&user.AuthVersion,
+		&user.TelegramId,
 		&user.Roles,
 	)
 
@@ -108,6 +111,7 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string) (*d
 			u.created_at,
 			u.updated_at,
 			u.auth_version,
+			u.telegram_id,
 			COALESCE(
 				ARRAY_AGG(r.name) FILTER (WHERE r.name IS NOT NULL),
 				'{}'::text[]
@@ -121,7 +125,8 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string) (*d
 				u.username,
 				u.created_at,
 				u.updated_at,
-				u.auth_version;
+				u.auth_version,
+				u.telegram_id;
     `
 
 	user := &domain.User{}
@@ -133,6 +138,7 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string) (*d
 		&user.CreatedAt,
 		&user.UpdatedAt,
 		&user.AuthVersion,
+		&user.TelegramId,
 		&user.Roles,
 	)
 
@@ -156,6 +162,7 @@ func (r *userRepository) GetByID(ctx context.Context, id int64) (*domain.User, e
 			u.created_at,
 			u.updated_at,
 			u.auth_version,
+			u.telegram_id,
 			COALESCE(
 				ARRAY_AGG(r.name) FILTER (WHERE r.name IS NOT NULL),
 				'{}'::text[]
@@ -165,11 +172,12 @@ func (r *userRepository) GetByID(ctx context.Context, id int64) (*domain.User, e
 				LEFT JOIN roles r ON r.id = ur.role_id
 		WHERE u.id = $1
 		GROUP BY u.id,
-				u.email,
-				u.username,
-				u.created_at,
-				u.updated_at,
-				u.auth_version;
+				 u.email,
+				 u.username,
+				 u.created_at,
+				 u.updated_at,
+				 u.auth_version,
+				 u.telegram_id;
     `
 
 	user := &domain.User{}
@@ -181,6 +189,7 @@ func (r *userRepository) GetByID(ctx context.Context, id int64) (*domain.User, e
 		&user.CreatedAt,
 		&user.UpdatedAt,
 		&user.AuthVersion,
+		&user.TelegramId,
 		&user.Roles,
 	)
 
@@ -200,7 +209,7 @@ func (r *userRepository) AddUserToRole(ctx context.Context, userID, roleID int64
 		return fmt.Errorf("begin add user to role: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	
+
 	query := `
 		INSERT INTO user_roles VALUES ($1, $2)
 		ON CONFLICT DO NOTHING;

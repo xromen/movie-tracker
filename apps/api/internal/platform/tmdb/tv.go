@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"time"
 
+	tmdb "github.com/cyruzin/golang-tmdb"
 	"github.com/xromen/movietracker/internal/domain"
 )
 
@@ -350,34 +352,46 @@ func (c *client) GetTvSeasonEpisodes(ctx context.Context, tvId int64, seasonNumb
 			}
 		}
 
-		overview := episode.Overview
-		title := episode.Name
+		// overview := episode.Overview
+		// title := episode.Name
 
-		var translation *translationData
+		// var translation *translationData
 
-		if overview == "" || title == "" {
-			translation, err = c.getTvEpisodeEnglishTranslation(ctx, tvId, seasonNumber, episode.EpisodeNumber)
-		}
+		// if overview == "" || title == "" {
+		// 	translation, err = c.getTvEpisodeEnglishTranslation(ctx, tvId, seasonNumber, episode.EpisodeNumber)
+		// }
 
-		if err == nil && translation != nil {
-			if overview == "" {
-				overview = translation.Overview
+		// if err == nil && translation != nil {
+		// 	if overview == "" {
+		// 		overview = translation.Overview
+		// 	}
+		// 	if title == "" {
+		// 		title = translation.Title
+		// 	}
+		// }
+
+		var airDate *time.Time
+
+		if episode.AirDate != "" {
+			parsedAirDate, err := time.Parse(time.DateOnly, episode.AirDate)
+
+			if err != nil {
+				return nil, fmt.Errorf("get tv episodes failed parse air date %s: %w", episode.AirDate, err)
 			}
-			if title == "" {
-				title = translation.Title
-			}
+
+			airDate = &parsedAirDate
 		}
 
 		episodes = append(episodes, domain.Episode{
 			ID:            episode.ID,
-			ReleaseDate:   episode.AirDate,
+			AirDate:       airDate,
 			EpisodeNumber: episode.EpisodeNumber,
-			Title:         title,
-			Overview:      overview,
+			Title:         episode.Name,
+			Overview:      episode.Overview,
 			Runtime:       episode.Runtime,
 			SeasonNumber:  episode.SeasonNumber,
 			TVShowId:      episode.ShowID,
-			PosterPath:    c.getPosterPath(episode.StillPath),
+			StillPath:     c.getPosterPath(episode.StillPath),
 			VoteAverage:   episode.VoteAverage,
 		})
 	}
@@ -390,6 +404,34 @@ func (c *client) GetTvSeasonEpisodes(ctx context.Context, tvId int64, seasonNumb
 		TotalPages: min(int(totalPages), maxTmdbPagesCount),
 		TotalItems: len(result.Episodes),
 	}, nil
+}
+
+func (c *client) GetTVSchedule(ctx context.Context, tmdbID int64) (*domain.TVSchedule, error) {
+	opts := getDefaultOpts()
+
+	tmdbClient, err := c.requestClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := tmdbClient.GetTVDetails(int(tmdbID), opts)
+	if err != nil {
+		return nil, fmt.Errorf("get tv show schedule: %w", err)
+	}
+
+	schedule := domain.TVSchedule{
+		Status: result.Status,
+	}
+
+	if result.LastEpisodeToAir != (tmdb.LastEpisodeToAir{}) {
+		schedule.SeasonNumbers = append(schedule.SeasonNumbers, result.LastEpisodeToAir.SeasonNumber)
+	}
+
+	if result.NextEpisodeToAir != (tmdb.NextEpisodeToAir{}) {
+		schedule.SeasonNumbers = append(schedule.SeasonNumbers, result.NextEpisodeToAir.SeasonNumber)
+	}
+
+	return &schedule, nil
 }
 
 func (c *client) getTvSeasonEnglishTranslation(ctx context.Context, tvShowId int64, seasonNumber int) (*translationData, error) {

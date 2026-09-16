@@ -445,6 +445,10 @@ func (s *tvShowService) MarkSeasonWatched(ctx context.Context, userID, tvShowID 
 		return fmt.Errorf("get season episodes for marking watched: %w", err)
 	}
 
+	if len(episodesOutput.Episodes) == 0 {
+		return fmt.Errorf("no episodes found: %w", domain.ErrInvalidInput)
+	}
+
 	episodeNumbers := make([]int32, 0, len(episodesOutput.Episodes))
 	for _, episode := range episodesOutput.Episodes {
 		episodeNumbers = append(episodeNumbers, int32(episode.EpisodeNumber))
@@ -552,7 +556,7 @@ func (s *tvShowService) withWatchedSeasons(ctx context.Context, userID *int64, o
 			return nil, fmt.Errorf("get watched episodes: %w", err)
 		}
 
-		if len(watchedNumbers) == season.EpisodeCount {
+		if season.EpisodeCount != 0 && len(watchedNumbers) == season.EpisodeCount {
 			value := true
 			output.Seasons[i].IsWatched = &value
 		}
