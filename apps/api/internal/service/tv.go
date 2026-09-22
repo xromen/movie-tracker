@@ -62,6 +62,7 @@ type TVShowService interface {
 	GetOnTheAir(ctx context.Context, userID *int64, page int) (*TVShowPageOutput, error)
 	GetPopular(ctx context.Context, userID *int64, page int) (*TVShowPageOutput, error)
 	GetTopRated(ctx context.Context, userID *int64, page int) (*TVShowPageOutput, error)
+	GetByCompanyID(ctx context.Context, userID *int64, companyID int64, page int) (*TVShowPageOutput, error)
 	GetDetails(ctx context.Context, userID *int64, id int64) (*domain.TVShowDetail, error)
 	GetRecommendations(ctx context.Context, userID *int64, id int64, page int) (*TVShowPageOutput, error)
 	GetSeasonEpisodes(ctx context.Context, userID *int64, tvID int64, seasonNumber int, page int) (*EpisodePageOutput, error)
@@ -245,6 +246,45 @@ func (s *tvShowService) GetTopRated(ctx context.Context, userID *int64, page int
 		defer cancel()
 		if err := s.cache.Set(cacheCtx, cacheKey, output, searchCacheTTL); err != nil {
 			s.logger.Warn("failed to cache top rated tv shows result", "error", err)
+		}
+	})
+
+	return s.withWatchStatuses(ctx, output, userID), nil
+}
+
+func (s *tvShowService) GetByCompanyID(ctx context.Context, userID *int64, companyID int64, page int) (*TVShowPageOutput, error) {
+	if page < 1 {
+		page = 1
+	}
+
+	cacheKey := cache.TVShowByCompanyIDKey(companyID, page)
+
+	var cacheResult TVShowPageOutput
+	err := s.cache.Get(ctx, cacheKey, &cacheResult)
+	if err == nil {
+		return s.withWatchStatuses(ctx, &cacheResult, userID), nil
+	}
+
+	if !errors.Is(err, cache.ErrCacheMiss) {
+		s.logger.Warn("cache get failed, falling back to tmdb",
+			"key", cacheKey,
+			"error", err,
+		)
+	}
+
+	result, err := s.tmdbClient.GetTVShowsByCompanyID(ctx, companyID, page)
+
+	if err != nil {
+		return nil, fmt.Errorf("get tv shows by company id: %w", err)
+	}
+
+	output := toTvPageOutput(result)
+
+	cache.InBackground(func() {
+		cacheCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		if err := s.cache.Set(cacheCtx, cacheKey, output, searchCacheTTL); err != nil {
+			s.logger.Warn("failed to cache search result", "error", err)
 		}
 	})
 

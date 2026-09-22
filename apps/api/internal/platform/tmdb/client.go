@@ -38,6 +38,7 @@ type Client interface {
 	GetMovieDetails(ctx context.Context, tmdbId int64) (*domain.MovieDetail, error)
 	GetMovieRecommendations(ctx context.Context, tmdbId int64, page int) (*Paginated[domain.Media], error)
 	GetMovieReleases(ctx context.Context, tmdbID int64, region string) ([]domain.MovieRelease, error)
+	GetMoviesByCompanyID(ctx context.Context, companyID int64, page int) (*Paginated[domain.Media], error)
 
 	//Collection
 	GetCollectionDetails(ctx context.Context, id int64) (*domain.Collection, error)
@@ -49,6 +50,7 @@ type Client interface {
 	GetTVShowOnTheAir(ctx context.Context, page int) (*Paginated[domain.Media], error)
 	GetTVShowPopular(ctx context.Context, page int) (*Paginated[domain.Media], error)
 	GetTVShowTopRated(ctx context.Context, page int) (*Paginated[domain.Media], error)
+	GetTVShowsByCompanyID(ctx context.Context, companyID int64, page int) (*Paginated[domain.Media], error)
 	GetTVShowDetails(ctx context.Context, tmdbId int64) (*domain.TVShowDetail, error)
 	GetTVShowRecommendations(ctx context.Context, tmdbId int64, page int) (*Paginated[domain.Media], error)
 	GetTvSeasonEpisodes(ctx context.Context, tvId int64, seasonNumber int, page int) (*Paginated[domain.Episode], error)

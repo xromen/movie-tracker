@@ -290,12 +290,14 @@ func setupRouter(
 			unprotectedMovies.GET("/top-rated", movieHandler.TopRated)
 			unprotectedMovies.GET("/upcoming", movieHandler.Upcoming)
 		}
+	}
 
-		//protectedMovies := protected.Group("/movie")
-		//{
-		//	//protectedMovies.GET("", movieHandler.List)
-		//	//protectedMovies.POST("/list", movieHandler.AddToList)
-		//}
+	{
+		unprotectedCompany := v1.Group("/company", handler.OptionalAuthMiddleware(jwtManager, userService))
+		{
+			unprotectedCompany.GET("/:company_id/movie", movieHandler.ByCompanyID)
+			unprotectedCompany.GET("/:company_id/tv", tvShowHandler.ByCompanyID)
+		}
 	}
 
 	{
@@ -313,9 +315,6 @@ func setupRouter(
 
 		protectedTVShows := protected.Group("/tv")
 		{
-			//protectedTVShows.GET("", tvShowHandler.GetList)
-			//protectedTVShows.POST("/list", tvShowHandler.AddToList)
-
 			protectedTVShows.PUT("/:id/season/:season_number/episode/:episode_number/watched", tvShowHandler.MarkEpisodeWatched)
 			protectedTVShows.DELETE("/:id/season/:season_number/episode/:episode_number/watched", tvShowHandler.UnmarkEpisodeWatched)
 

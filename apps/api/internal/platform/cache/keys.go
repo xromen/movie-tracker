@@ -18,6 +18,9 @@ func MovieTopRatedKey(page int) string {
 func MovieUpcomingKey(page int) string {
 	return fmt.Sprintf("movie:upcoming:%d", page)
 }
+func MovieByCompanyIDKey(companyID int64, page int) string {
+	return fmt.Sprintf("movie:by_company_id:%d:%d", companyID, page)
+}
 func MovieDetailKey(tmdbID int64) string {
 	return fmt.Sprintf("movie:detail:tmdb:%d", tmdbID)
 }
@@ -48,6 +51,9 @@ func TVShowTopRatedKey(page int) string {
 }
 func TVShowAiringTodayKey(page int) string {
 	return fmt.Sprintf("tvshow:airingtoday:%d", page)
+}
+func TVShowByCompanyIDKey(companyID int64, page int) string {
+	return fmt.Sprintf("tvshow:by_company_id:%d:%d", companyID, page)
 }
 func TVShowDetailKey(tmdbID int64) string {
 	return fmt.Sprintf("tvshow:detail:tmdb:%d", tmdbID)

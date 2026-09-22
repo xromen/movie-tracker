@@ -1,6 +1,8 @@
 package domain
 
-import "time"
+import (
+	"time"
+)
 
 // type TVShow struct {
 // 	ID          int64
@@ -36,6 +38,7 @@ type TVShowDetail struct {
 	OriginalLanguage       string
 	OriginCountry          []string
 	ProductionCountries    []string
+	ProductionCompanies    []ProductionCompany
 	OriginalTitle          string
 	Status                 string
 	Videos                 []Video

@@ -1,4 +1,4 @@
-import { Genre, MediaType, MovieStatus, TvStatus } from '@/lib/api/types'
+import { Genre, MediaType, MovieStatus, ProductionCompany, TvStatus } from '@/lib/api/types'
 import styles from './MediaHeader.module.css'
 import { getSession } from '@/lib/auth/session'
 import Rating from '@/components/rating/rating'
@@ -19,6 +19,7 @@ export interface MediaHeaderProps {
     originalLanguage: string
     originCountry: string[]
     productionCountries: string[]
+    productionCompanies: ProductionCompany[]
     revenue: number
     budget?: number
     runtime?: number
@@ -127,6 +128,19 @@ const MediaHeader = async (props: MediaHeaderProps) => {
                             <tr>
                                 <td>Страна производства</td>
                                 <td>{props.productionCountries.join(", ")}</td>
+                            </tr>
+                        )}
+                        {props.productionCompanies.length > 0 && (
+                            <tr>
+                                <td>Компания производства</td>
+                                <td>
+                                    {
+                                        props.productionCompanies.map((c) =>
+                                        (
+                                            <a key={c.id} className={styles.commaSeparated} href={`/company/${c.id}/${props.type}`}>{c.name}</a>
+                                        ))
+                                    }
+                                </td>
                             </tr>
                         )}
                         {props.budget != undefined && props.budget !== 0 && (

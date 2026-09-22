@@ -218,6 +218,43 @@ func (c *client) GetMovieUpcoming(ctx context.Context, page int) (*Paginated[dom
 	}, nil
 }
 
+func (c *client) GetMoviesByCompanyID(ctx context.Context, companyID int64, page int) (*Paginated[domain.Media], error) {
+	opts := getDefaultOpts()
+	opts["page"] = fmt.Sprintf("%d", page)
+	opts["sort_by"] = "popularity.desc"
+	opts["with_companies"] = fmt.Sprintf("%d", companyID)
+
+	tmdbClient, err := c.requestClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := tmdbClient.GetDiscoverMovie(opts)
+	if err != nil {
+		return nil, fmt.Errorf("get movie discover by company id: %w", err)
+	}
+
+	medias := make([]domain.Media, 0, len(result.Results))
+	for _, movie := range result.Results {
+		medias = append(medias, domain.Media{
+			ID:          movie.ID,
+			Title:       movie.Title,
+			Overview:    movie.Overview,
+			ReleaseDate: movie.ReleaseDate,
+			PosterPath:  c.getPosterPath(movie.PosterPath),
+			VoteAverage: movie.VoteAverage,
+			VoteCount:   movie.VoteCount,
+			Type:        domain.MediaTypeMovie,
+		})
+	}
+
+	return &Paginated[domain.Media]{
+		Items:      medias,
+		TotalPages: min(int(result.TotalPages), maxTmdbPagesCount),
+		TotalItems: int(result.TotalResults),
+	}, nil
+}
+
 func (c *client) GetMovieDetails(ctx context.Context, tmdbId int64) (*domain.MovieDetail, error) {
 	opts := getDefaultOpts()
 	opts["append_to_response"] = "videos"
@@ -244,6 +281,16 @@ func (c *client) GetMovieDetails(ctx context.Context, tmdbId int64) (*domain.Mov
 		productionCountries = append(productionCountries, prod.Name)
 	}
 
+	productionCompanies := make([]domain.ProductionCompany, 0, len(result.ProductionCompanies))
+	for _, company := range result.ProductionCompanies {
+		productionCompanies = append(productionCompanies, domain.ProductionCompany{
+			ID:            company.ID,
+			LogoPath:      c.getPosterPath(company.LogoPath),
+			Name:          company.Name,
+			OriginCountry: company.OriginCountry,
+		})
+	}
+
 	return &domain.MovieDetail{
 		ID:                  result.ID,
 		Title:               result.Title,
@@ -255,6 +302,7 @@ func (c *client) GetMovieDetails(ctx context.Context, tmdbId int64) (*domain.Mov
 		OriginCountry:       result.OriginCountry,
 		OriginalTitle:       result.OriginalTitle,
 		ProductionCountries: productionCountries,
+		ProductionCompanies: productionCompanies,
 		Popularity:          result.Popularity,
 		Status:              result.Status,
 		Videos:              toDomainViedos(result.Videos),

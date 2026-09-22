@@ -29,25 +29,26 @@ type tvShowSearchResponse struct {
 }
 
 type tvShowDetailResponse struct {
-	ID                     int64                  `json:"id"`
-	Title                  string                 `json:"title"`
-	Overview               string                 `json:"overview"`
-	ReleaseDate            string                 `json:"release_date"`
-	LastEpisodeReleaseDate string                 `json:"last_episode_release_date"`
-	NextEpisodeReleaseDate string                 `json:"next_episode_release_date"`
-	PosterPath             string                 `json:"poster_path"`
-	Genres                 []genreResponse        `json:"genres"`
-	OriginalLanguage       string                 `json:"original_language"`
-	OriginCountry          []string               `json:"origin_country"`
-	OriginalTitle          string                 `json:"original_title"`
-	ProductionCountries    []string               `json:"production_countries"`
-	Status                 string                 `json:"status"`
-	Videos                 []videoResponse        `json:"videos"`
-	VoteAverage            float32                `json:"vote_average"`
-	VoteCount              int64                  `json:"vote_count"`
-	NumberOfSeasons        int                    `json:"number_of_seasons"`
-	NumberOfEpisodes       int                    `json:"number_of_episodes"`
-	Seasons                []tvShowSeasonResponse `json:"seasons"`
+	ID                     int64                       `json:"id"`
+	Title                  string                      `json:"title"`
+	Overview               string                      `json:"overview"`
+	ReleaseDate            string                      `json:"release_date"`
+	LastEpisodeReleaseDate string                      `json:"last_episode_release_date"`
+	NextEpisodeReleaseDate string                      `json:"next_episode_release_date"`
+	PosterPath             string                      `json:"poster_path"`
+	Genres                 []genreResponse             `json:"genres"`
+	OriginalLanguage       string                      `json:"original_language"`
+	OriginCountry          []string                    `json:"origin_country"`
+	OriginalTitle          string                      `json:"original_title"`
+	ProductionCountries    []string                    `json:"production_countries"`
+	ProductionCompanies    []productionCompanyResponse `json:"production_companies"`
+	Status                 string                      `json:"status"`
+	Videos                 []videoResponse             `json:"videos"`
+	VoteAverage            float32                     `json:"vote_average"`
+	VoteCount              int64                       `json:"vote_count"`
+	NumberOfSeasons        int                         `json:"number_of_seasons"`
+	NumberOfEpisodes       int                         `json:"number_of_episodes"`
+	Seasons                []tvShowSeasonResponse      `json:"seasons"`
 }
 
 type tvShowSeasonResponse struct {
@@ -188,6 +189,25 @@ func (h *TVShowHandler) GetOnTheAir(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 
 	result, err := h.tvShowService.GetOnTheAir(c.Request.Context(), userID, page)
+	if err != nil {
+		handleServiceError(c, err, h.logger)
+		return
+	}
+
+	c.JSON(http.StatusOK, toPaginatedTVShows(result))
+}
+
+func (h *TVShowHandler) ByCompanyID(c *gin.Context) {
+	var userID *int64
+	if id, exists := c.Get(ContextUserID); exists {
+		if v, ok := id.(int64); ok {
+			userID = &v
+		}
+	}
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	companyID, _ := strconv.ParseInt(c.Param("company_id"), 10, 64)
+
+	result, err := h.tvShowService.GetByCompanyID(c.Request.Context(), userID, companyID, page)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return

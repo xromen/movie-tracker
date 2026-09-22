@@ -31,6 +31,7 @@ type MovieDetail struct {
 	OriginalLanguage    string
 	OriginCountry       []string
 	ProductionCountries []string
+	ProductionCompanies []ProductionCompany
 	OriginalTitle       string
 	Popularity          float32
 	Status              string
@@ -48,4 +49,11 @@ type MovieRelease struct {
 	Type          int
 	ReleaseAt     time.Time
 	Certification string
+}
+
+type ProductionCompany struct {
+	ID            int64
+	LogoPath      string
+	Name          string
+	OriginCountry string
 }
