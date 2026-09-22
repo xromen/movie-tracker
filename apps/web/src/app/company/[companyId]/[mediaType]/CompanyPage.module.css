@@ -1,0 +1,329 @@
+.page {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    padding: 28px 16px 48px;
+}
+
+.hero {
+    display: grid;
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+    gap: 36px;
+    align-items: center;
+    min-height: 260px;
+    padding: 20px 0 40px;
+    border-bottom: 1px solid #2a2a4a;
+}
+
+.logoArea {
+    width: 100%;
+    min-height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #f5f5f8 0%, #dedee7 100%);
+}
+
+.logo {
+    width: 100%;
+    max-width: 220px;
+    max-height: 130px;
+    display: block;
+    object-fit: contain;
+    filter:
+        drop-shadow(0 1px 1px rgba(15, 15, 26, 0.45))
+        drop-shadow(0 8px 20px rgba(15, 15, 26, 0.2));
+}
+
+.logoPlaceholder {
+    color: #787895;
+}
+
+.companyInfo {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    align-self: start;
+}
+
+.eyebrow,
+.sectionEyebrow {
+    color: #a78bfa;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    line-height: 1.4;
+    text-transform: uppercase;
+}
+
+.title {
+    margin: 8px 0 0;
+    color: #f5f3ff;
+    font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+}
+
+.description {
+    max-width: 900px;
+    margin-top: 20px;
+    color: #c7c7df;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    text-align: left;
+    white-space: pre-line;
+}
+
+.companyMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px 28px;
+    margin-top: 24px;
+}
+
+.metaItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #a78bfa;
+}
+
+.metaItem div {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.metaItem dt {
+    color: #777793;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1.25;
+    text-transform: uppercase;
+}
+
+.metaItem dd {
+    margin: 0;
+    color: #e0e0ff;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.metaItem a {
+    color: #c4b5fd;
+    text-decoration: none;
+}
+
+.metaItem a:hover {
+    color: #ede9fe;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.metaItem a:focus-visible {
+    outline: 2px solid #a78bfa;
+    outline-offset: 3px;
+    border-radius: 2px;
+}
+
+.catalog {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.catalogHeader {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid #2a2a4a;
+}
+
+.sectionTitle {
+    margin: 4px 0 0;
+    color: #f5f3ff;
+    font-size: 1.75rem;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.resultsCount {
+    margin-top: 6px;
+    color: #777793;
+    font-size: 0.8125rem;
+}
+
+.mediaTypeControl {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #8888aa;
+    font-size: 0.75rem;
+    font-weight: 700;
+.mediaTypeSelect {
+    position: relative;
+    min-width: 180px;
+}
+
+.selectTrigger {
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 12px;
+    border: 1px solid #353555;
+    border-radius: 10px;
+    color: #e0e0ff;
+    background-color: #1a1a2e;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1;
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+}
+
+.selectTrigger::-webkit-details-marker {
+    display: none;
+}
+
+.selectTrigger:hover,
+.mediaTypeSelect[open] .selectTrigger {
+    border-color: #7965ad;
+}
+
+.selectTrigger:focus-visible {
+    outline: none;
+    border-color: #a78bfa;
+    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.16);
+}
+
+.selectChevron {
+    flex: 0 0 auto;
+    color: #777793;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.selectTrigger:hover .selectChevron,
+.mediaTypeSelect[open] .selectChevron {
+    color: #a78bfa;
+}
+
+.mediaTypeSelect[open] .selectChevron {
+    transform: rotate(180deg);
+}
+
+.selectMenu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px;
+    border: 1px solid #353555;
+    border-radius: 10px;
+    background: #1a1a2e;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.38);
+}
+
+.selectOption {
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 10px;
+    border-radius: 7px;
+    color: #b8b8d0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.16s ease, background-color 0.16s ease;
+}
+
+.selectOption:hover,
+.selectOption:focus-visible {
+    outline: none;
+    color: #ede9fe;
+    background: rgba(167, 139, 250, 0.13);
+}
+
+.selectOptionActive {
+    color: #c4b5fd;
+}
+
+.emptyState {
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 24px 0;
+    color: #777793;
+    text-align: center;
+}
+
+@media (max-width: 820px) {
+    .page {
+        gap: 32px;
+        padding-top: 20px;
+    }
+
+    .hero {
+        grid-template-columns: 1fr;
+        gap: 24px;
+        padding-top: 8px;
+        padding-bottom: 32px;
+    }
+
+    .logoArea {
+        width: min(100%, 360px);
+        min-height: 150px;
+    }
+}
+
+@media (max-width: 600px) {
+    .page {
+        padding-right: 12px;
+        padding-left: 12px;
+    }
+
+    .logoArea {
+        min-height: 130px;
+        padding: 8px;
+    }
+
+    .companyMeta {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .metaItem {
+        width: 100%;
+    }
+
+    .catalogHeader {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .mediaTypeSelect {
+        width: 100%;
+    }
+}

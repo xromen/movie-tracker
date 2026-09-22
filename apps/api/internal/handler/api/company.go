@@ -17,7 +17,7 @@ type companyDetailsResponse struct {
 	LogoPath      string `json:"logo_path"`
 	OriginCountry string `json:"origin_country"`
 	Homepage      string `json:"homepage"`
-	Headquarters  string `json:"headquearters"`
+	Headquarters  string `json:"headquarters"`
 }
 
 type CompanyHandler struct {
@@ -33,7 +33,7 @@ func NewCompanyHandler(companyService service.CompanyService, logger *slog.Logge
 }
 
 func (h *CompanyHandler) GetDetails(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, _ := strconv.ParseInt(c.Param("company_id"), 10, 64)
 
 	result, err := h.companyService.GetDetails(c.Request.Context(), id)
 	if err != nil {

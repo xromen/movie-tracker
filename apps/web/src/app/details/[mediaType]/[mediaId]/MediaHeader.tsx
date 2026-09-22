@@ -1,3 +1,5 @@
+import Link from "next/link"
+import { ChevronRight } from "lucide-react"
 import { Genre, MediaType, MovieStatus, ProductionCompany, TvStatus } from '@/lib/api/types'
 import styles from './MediaHeader.module.css'
 import { getSession } from '@/lib/auth/session'
@@ -134,12 +136,18 @@ const MediaHeader = async (props: MediaHeaderProps) => {
                             <tr>
                                 <td>Компания производства</td>
                                 <td>
-                                    {
-                                        props.productionCompanies.map((c) =>
-                                        (
-                                            <a key={c.id} className={styles.commaSeparated} href={`/company/${c.id}/${props.type}`}>{c.name}</a>
-                                        ))
-                                    }
+                                    <div className={styles.companyLinks}>
+                                        {props.productionCompanies.map((company) => (
+                                            <Link
+                                                key={company.id}
+                                                className={styles.companyLink}
+                                                href={`/company/${company.id}/${props.type}`}
+                                            >
+                                                <span>{company.name}</span>
+                                                <ChevronRight size={14} strokeWidth={2} aria-hidden="true" />
+                                            </Link>
+                                        ))}
+                                    </div>
                                 </td>
                             </tr>
                         )}

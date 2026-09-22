@@ -71,6 +71,16 @@ export interface ProductionCompany {
     originCountry: string
 }
 
+export interface CompanyDetails {
+    id: number
+    name: string
+    description?: string
+    logoPath?: string
+    originCountry?: string
+    homepage?: string
+    headquarters?: string
+}
+
 export interface MediasResponse {
     results: Media[]
     totalPages: number

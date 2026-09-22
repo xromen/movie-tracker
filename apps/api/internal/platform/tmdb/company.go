@@ -25,5 +25,6 @@ func (c *client) GetCompanyDetails(ctx context.Context, tmdbID int64) (*domain.C
 		LogoPath:      c.getPosterPath(result.LogoPath),
 		OriginCountry: result.OriginCountry,
 		Homepage:      result.Homepage,
+		Headquarters:  result.Headquarters,
 	}, nil
 }
