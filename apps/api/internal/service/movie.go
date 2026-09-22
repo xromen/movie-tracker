@@ -316,9 +316,7 @@ func (s *movieService) GetMoviesByCompanyID(ctx context.Context, userID *int64, 
 }
 
 func (s *movieService) GetDetails(ctx context.Context, id int64) (*domain.MovieDetail, error) {
-	var cacheKey string
-
-	cacheKey = cache.MovieDetailKey(id)
+	cacheKey := cache.MovieDetailKey(id)
 
 	var output domain.MovieDetail
 	if err := s.cache.Get(ctx, cacheKey, &output); err == nil {

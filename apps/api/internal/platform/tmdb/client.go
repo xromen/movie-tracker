@@ -58,6 +58,9 @@ type Client interface {
 
 	//Search
 	SearchMulti(ctx context.Context, query string, page int) (*Paginated[domain.Media], error)
+
+	//Company
+	GetCompanyDetails(ctx context.Context, tmdbID int64) (*domain.CompanyDetails, error)
 }
 
 type Config struct {

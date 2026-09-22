@@ -88,3 +88,7 @@ func CollectionKey(id int64) string {
 func SearchMultiKey(query string, page int) string {
 	return fmt.Sprintf("searchmulti:%s:%d", query, page)
 }
+
+func CompanyDetailsKey(id int64) string {
+	return fmt.Sprintf("company:%d", id)
+}

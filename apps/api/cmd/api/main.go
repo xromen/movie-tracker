@@ -147,6 +147,9 @@ func main() {
 	})
 	telegramHandler := handler.NewTelegramHandler(telegramService, log)
 
+	companyService := service.NewCompanyService(tmdbClient, redisCache, log)
+	companyHandler := handler.NewCompanyHandler(companyService, log)
+
 	router := setupRouter(
 		cfg,
 		jwtManager,
@@ -159,6 +162,7 @@ func main() {
 		collectionHandler,
 		searchHandler,
 		telegramHandler,
+		companyHandler,
 	)
 
 	srv := &http.Server{
@@ -220,6 +224,7 @@ func setupRouter(
 	collectionHandler *handler.CollectionHandler,
 	searchHandler *handler.SearchHandler,
 	telegramHandler *handler.TelegramHandler,
+	companyHandler *handler.CompanyHandler,
 ) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Recovery())
@@ -295,6 +300,7 @@ func setupRouter(
 	{
 		unprotectedCompany := v1.Group("/company", handler.OptionalAuthMiddleware(jwtManager, userService))
 		{
+			unprotectedCompany.GET("/:company_id", companyHandler.GetDetails)
 			unprotectedCompany.GET("/:company_id/movie", movieHandler.ByCompanyID)
 			unprotectedCompany.GET("/:company_id/tv", tvShowHandler.ByCompanyID)
 		}
