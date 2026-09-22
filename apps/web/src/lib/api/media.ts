@@ -36,6 +36,7 @@ interface ApiMediaDetails extends ApiMedia {
     origin_country: string[]
     original_title: string
     production_countries: string[]
+    production_companies: ApiProductionCompany[]
     popularity: number
     status: MovieStatus | TvStatus
     videos: Video[]
@@ -49,6 +50,13 @@ interface ApiMediaDetails extends ApiMedia {
     last_episode_release_date?: string | null
     next_episode_release_date?: string | null
     next_episode_eelease_date?: string | null
+}
+
+interface ApiProductionCompany {
+    id: number
+    logo_path: string
+    name: string
+    origin_country: string
 }
 
 interface ApiMediasResponse {
@@ -177,12 +185,11 @@ export const getMediasList = async (type: MediaType, filter: MovieList | TvList,
     return mapMediasResponse(data, type)
 }
 
-// export const searchMovies = async (query: string, page = 1): Promise<MoviesResponse> => {
-//   const params = new URLSearchParams({ q: query, page: String(page) })
-//   const data = await fetchApi<ApiMediasResponse>(`/v1/movie/search?${params.toString()}`)
+export const getMediasListByCompanyId = async (type: MediaType, companyId: number, page = 1): Promise<MediasResponse> => {
+    const data = await fetchApi<ApiMediasResponse>(`/v1/company/${companyId}/${type}?page=${page}`)
 
-//   return mapMediasResponse(data)
-// }
+    return mapMediasResponse(data, type)
+}
 
 export const getMediaById = async (type: MediaType, id: number): Promise<MediaDetails> => {
     const data = await fetchApi<ApiMediaDetails>(`/v1/${type}/${id}`, { revalidate: 900 })
@@ -201,6 +208,12 @@ export const getMediaById = async (type: MediaType, id: number): Promise<MediaDe
         originCountry: data.origin_country,
         originalTitle: data.original_title,
         productionCountries: data.production_countries,
+        productionCompanies: data.production_companies.map((company) => ({
+            id: company.id,
+            logoPath: company.logo_path,
+            name: company.name,
+            originCountry: company.origin_country
+        })),
         popularity: data.popularity,
         status: data.status,
         videos: data.videos.map((video) => ({

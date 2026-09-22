@@ -1,167 +1,209 @@
 .mainContainer {
-    display: flex;
-    flex-direction: row;
-    gap: 32px;
-    align-items: flex-start;
+  display: flex;
+  flex-direction: row;
+  gap: 32px;
+  align-items: flex-start;
 }
 
 .posterContainer {
-    max-width: 256px;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    flex: 0 0 256px;
+  max-width: 256px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 0 0 256px;
 }
 
 .poster {
-    width: 100%;
-    flex-shrink: 0;
-    aspect-ratio: 2/3;
-    background: #0f0f23;
-    border-radius: 8px;
-    overflow: hidden;
-    border: 1px solid #2a2a4a;
+  width: 100%;
+  flex-shrink: 0;
+  aspect-ratio: 2/3;
+  background: #0f0f23;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #2a2a4a;
 }
 
 .posterImage {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .posterPlaceholder {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 48px;
-    background: #121220;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  background: #121220;
 }
 
 .info {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    align-items: flex-start;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: flex-start;
 }
 
 .titleContainer {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
-    gap: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 8px;
 }
 
 .title {
-    margin: 0;
-    color: #f5f3ff;
-    font-size: 2.3rem;
-    font-weight: 700;
-    line-height: 1.08;
-    overflow-wrap: anywhere;
+  margin: 0;
+  color: #f5f3ff;
+  font-size: 2.3rem;
+  font-weight: 700;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
 }
 
 .mediaType {
-    color: #a78bfa;
-    font-size: 0.875rem;
-    font-weight: 700;
-    line-height: 1.25rem;
-    text-transform: uppercase;
+  color: #a78bfa;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.25rem;
+  text-transform: uppercase;
 }
 
 .quickMeta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    color: #c7c7df;
-    font-size: 0.875rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: #c7c7df;
+  font-size: 0.875rem;
 }
 
 .quickMeta span {
-    display: inline-flex;
-    align-items: center;
-    min-height: 28px;
-    padding: 4px 10px;
-    border: 1px solid #2a2a4a;
-    border-radius: 999px;
-    background: #17172a;
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid #2a2a4a;
+  border-radius: 999px;
+  background: #17172a;
 }
 
-
 .table {
-    width: 100%;
-    border-collapse: collapse;
+  width: 100%;
+  border-collapse: collapse;
 
-    tr:not(:last-child) {
-        td {
-            padding-bottom: 10px;
-        }
+  tr:not(:last-child) {
+    td {
+      padding-bottom: 10px;
+    }
+  }
+
+  tr {
+    td:nth-child(1) {
+      color: #d4d4ee;
+      font-size: 0.875rem;
+      line-height: 1.5rem;
+      font-weight: 600;
+      white-space: nowrap;
+      padding-right: 16px;
+      min-width: 160px;
     }
 
-    tr {
-        td:nth-child(1) {
-            color: #d4d4ee;
-            font-size: 0.875rem;
-            line-height: 1.5rem;
-            font-weight: 600;
-            white-space: nowrap;
-            padding-right: 16px;
-            min-width: 160px;
-        }
-
-        td:nth-child(2) {
-            color: #a8a8c5;
-            font-size: 0.875rem;
-            line-height: 1.5rem;
-            font-weight: 400;
-            width: 100%;
-        }
+    td:nth-child(2) {
+      color: #a8a8c5;
+      font-size: 0.875rem;
+      line-height: 1.5rem;
+      font-weight: 400;
+      width: 100%;
     }
+  }
 }
 
 .overview {
-    max-width: 860px;
-    color: #c7c7df;
-    font-size: 0.95rem;
-    font-weight: 400;
-    line-height: 1.65;
-    text-align: left;
+  color: #c7c7df;
+  font-size: 0.95rem;
+  font-weight: 400;
+  line-height: 1.65;
+  text-align: left;
+}
+
+.companyLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.companyLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 0;
+  color: #c4b5fd;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  text-decoration: underline;
+  text-decoration-color: rgba(167, 139, 250, 0.35);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  transition:
+    color 0.2s ease,
+    text-decoration-color 0.2s ease;
+}
+
+.companyLink svg {
+  color: #777793;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.companyLink:hover {
+  color: #f5f3ff;
+  text-decoration-color: #a78bfa;
+}
+
+.companyLink:hover svg {
+  color: #a78bfa;
+  transform: translateX(2px);
+}
+
+.companyLink:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 3px;
 }
 
 @media (max-width: 720px) {
-    .mainContainer {
-        flex-direction: column;
-        gap: 20px;
-    }
+  .mainContainer {
+    flex-direction: column;
+    gap: 20px;
+  }
 
-    .posterContainer {
-        max-width: none;
-        width: min(100%, 220px);
-        flex-basis: auto;
-        align-self: center;
-    }
+  .posterContainer {
+    max-width: none;
+    width: min(100%, 220px);
+    flex-basis: auto;
+    align-self: center;
+  }
 
-    .info {
-        width: 100%;
-        gap: 20px;
-    }
+  .info {
+    width: 100%;
+    gap: 20px;
+  }
 
-    .title {
-        font-size: 1.75rem;
-    }
+  .title {
+    font-size: 1.75rem;
+  }
 
-    .table {
-        display: block;
-        overflow-x: auto;
-    }
+  .table {
+    display: block;
+    overflow-x: auto;
+  }
 
-    .table tr td:nth-child(1) {
-        min-width: 136px;
-        white-space: normal;
-    }
+  .table tr td:nth-child(1) {
+    min-width: 136px;
+    white-space: normal;
+  }
 }

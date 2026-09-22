@@ -49,6 +49,7 @@ export interface MediaDetails extends Media {
     originCountry: string[]
     originalTitle: string
     productionCountries: string[]
+    productionCompanies: ProductionCompany[]
     popularity: number
     status: MovieStatus | TvStatus
     videos: Video[]
@@ -61,6 +62,23 @@ export interface MediaDetails extends Media {
     seasons?: Season[]
     lastEpisodeReleaseDate?: Date
     nextEpisodeReleaseDate?: Date
+}
+
+export interface ProductionCompany {
+    id: number
+    name: string
+    logoPath: string
+    originCountry: string
+}
+
+export interface CompanyDetails {
+    id: number
+    name: string
+    description?: string
+    logoPath?: string
+    originCountry?: string
+    homepage?: string
+    headquarters?: string
 }
 
 export interface MediasResponse {

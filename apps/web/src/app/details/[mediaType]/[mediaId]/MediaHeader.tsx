@@ -1,4 +1,6 @@
-import { Genre, MediaType, MovieStatus, TvStatus } from '@/lib/api/types'
+import Link from "next/link"
+import { ChevronRight } from "lucide-react"
+import { Genre, MediaType, MovieStatus, ProductionCompany, TvStatus } from '@/lib/api/types'
 import styles from './MediaHeader.module.css'
 import { getSession } from '@/lib/auth/session'
 import Rating from '@/components/rating/rating'
@@ -19,6 +21,7 @@ export interface MediaHeaderProps {
     originalLanguage: string
     originCountry: string[]
     productionCountries: string[]
+    productionCompanies: ProductionCompany[]
     revenue: number
     budget?: number
     runtime?: number
@@ -127,6 +130,25 @@ const MediaHeader = async (props: MediaHeaderProps) => {
                             <tr>
                                 <td>Страна производства</td>
                                 <td>{props.productionCountries.join(", ")}</td>
+                            </tr>
+                        )}
+                        {props.productionCompanies.length > 0 && (
+                            <tr>
+                                <td>Компания производства</td>
+                                <td>
+                                    <div className={styles.companyLinks}>
+                                        {props.productionCompanies.map((company) => (
+                                            <Link
+                                                key={company.id}
+                                                className={styles.companyLink}
+                                                href={`/company/${company.id}/${props.type}`}
+                                            >
+                                                <span>{company.name}</span>
+                                                <ChevronRight size={14} strokeWidth={2} aria-hidden="true" />
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </td>
                             </tr>
                         )}
                         {props.budget != undefined && props.budget !== 0 && (

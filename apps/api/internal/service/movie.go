@@ -51,6 +51,7 @@ type MovieService interface {
 	GetPopular(ctx context.Context, userID *int64, page int) (*MoviePageOutput, error)
 	GetTopRated(ctx context.Context, userID *int64, page int) (*MoviePageOutput, error)
 	GetUpcoming(ctx context.Context, userID *int64, page int) (*MoviePageOutput, error)
+	GetMoviesByCompanyID(ctx context.Context, userID *int64, companyID int64, page int) (*MoviePageOutput, error)
 	GetDetails(ctx context.Context, id int64) (*domain.MovieDetail, error)
 	GetRecommendations(ctx context.Context, userID *int64, id int64, page int) (*MoviePageOutput, error)
 }
@@ -275,10 +276,47 @@ func (s *movieService) GetUpcoming(ctx context.Context, userID *int64, page int)
 	return s.withWatchStatuses(ctx, output, userID), nil
 }
 
-func (s *movieService) GetDetails(ctx context.Context, id int64) (*domain.MovieDetail, error) {
-	var cacheKey string
+func (s *movieService) GetMoviesByCompanyID(ctx context.Context, userID *int64, companyID int64, page int) (*MoviePageOutput, error) {
+	if page < 1 {
+		page = 1
+	}
 
-	cacheKey = cache.MovieDetailKey(id)
+	cacheKey := cache.MovieByCompanyIDKey(companyID, page)
+
+	var cacheResult MoviePageOutput
+	err := s.cache.Get(ctx, cacheKey, &cacheResult)
+	if err == nil {
+		return s.withWatchStatuses(ctx, &cacheResult, userID), nil
+	}
+
+	if !errors.Is(err, cache.ErrCacheMiss) {
+		s.logger.Warn("cache get failed, falling back to tmdb",
+			"key", cacheKey,
+			"error", err,
+		)
+	}
+
+	result, err := s.tmdbClient.GetMoviesByCompanyID(ctx, companyID, page)
+
+	if err != nil {
+		return nil, fmt.Errorf("get movies by company id: %w", err)
+	}
+
+	output := toMoviePageOutput(result)
+
+	cache.InBackground(func() {
+		cacheCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		if err := s.cache.Set(cacheCtx, cacheKey, output, searchCacheTTL); err != nil {
+			s.logger.Warn("failed to cache search result", "error", err)
+		}
+	})
+
+	return s.withWatchStatuses(ctx, output, userID), nil
+}
+
+func (s *movieService) GetDetails(ctx context.Context, id int64) (*domain.MovieDetail, error) {
+	cacheKey := cache.MovieDetailKey(id)
 
 	var output domain.MovieDetail
 	if err := s.cache.Get(ctx, cacheKey, &output); err == nil {

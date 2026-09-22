@@ -46,26 +46,34 @@ type videoResponse struct {
 	Type        string `json:"type"`
 }
 
+type productionCompanyResponse struct {
+	ID            int64  `json:"id"`
+	LogoPath      string `json:"logo_path"`
+	Name          string `json:"name"`
+	OriginCountry string `json:"origin_country"`
+}
+
 type movieDetailResponse struct {
-	ID                  int64           `json:"id"`
-	Title               string          `json:"title"`
-	Overview            string          `json:"overview"`
-	ReleaseDate         string          `json:"release_date"`
-	PosterPath          string          `json:"poster_path"`
-	Genres              []genreResponse `json:"genres"`
-	OriginalLanguage    string          `json:"original_language"`
-	OriginCountry       []string        `json:"origin_country"`
-	OriginalTitle       string          `json:"original_title"`
-	ProductionCountries []string        `json:"production_countries"`
-	Popularity          float32         `json:"popularity"`
-	Status              string          `json:"status"`
-	Videos              []videoResponse `json:"videos"`
-	VoteAverage         float32         `json:"vote_average"`
-	VoteCount           int64           `json:"vote_count"`
-	Revenue             int64           `json:"revenue"`
-	Budget              int64           `json:"budget"`
-	Runtime             int             `json:"runtime"`
-	CollectionID        *int64          `json:"collection_id"`
+	ID                  int64                       `json:"id"`
+	Title               string                      `json:"title"`
+	Overview            string                      `json:"overview"`
+	ReleaseDate         string                      `json:"release_date"`
+	PosterPath          string                      `json:"poster_path"`
+	Genres              []genreResponse             `json:"genres"`
+	OriginalLanguage    string                      `json:"original_language"`
+	OriginCountry       []string                    `json:"origin_country"`
+	OriginalTitle       string                      `json:"original_title"`
+	ProductionCountries []string                    `json:"production_countries"`
+	ProductionCompanies []productionCompanyResponse `json:"production_companies"`
+	Popularity          float32                     `json:"popularity"`
+	Status              string                      `json:"status"`
+	Videos              []videoResponse             `json:"videos"`
+	VoteAverage         float32                     `json:"vote_average"`
+	VoteCount           int64                       `json:"vote_count"`
+	Revenue             int64                       `json:"revenue"`
+	Budget              int64                       `json:"budget"`
+	Runtime             int                         `json:"runtime"`
+	CollectionID        *int64                      `json:"collection_id"`
 }
 
 type MovieHandler struct {
@@ -165,6 +173,25 @@ func (h *MovieHandler) Upcoming(c *gin.Context) {
 	c.JSON(http.StatusOK, toPaginatedMovies(result))
 }
 
+func (h *MovieHandler) ByCompanyID(c *gin.Context) {
+	var userID *int64
+	if id, exists := c.Get(ContextUserID); exists {
+		if v, ok := id.(int64); ok {
+			userID = &v
+		}
+	}
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	companyID, _ := strconv.ParseInt(c.Param("company_id"), 10, 64)
+
+	result, err := h.movieService.GetMoviesByCompanyID(c.Request.Context(), userID, companyID, page)
+	if err != nil {
+		handleServiceError(c, err, h.logger)
+		return
+	}
+
+	c.JSON(http.StatusOK, toPaginatedMovies(result))
+}
+
 func (h *MovieHandler) GetMovieDetail(c *gin.Context) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 
@@ -233,6 +260,7 @@ func toMovieDetailResponse(movie *domain.MovieDetail) movieDetailResponse {
 		OriginCountry:       movie.OriginCountry,
 		OriginalTitle:       movie.OriginalTitle,
 		ProductionCountries: movie.ProductionCountries,
+		ProductionCompanies: toProductionCompaniesResponse(movie.ProductionCompanies),
 		Popularity:          movie.Popularity,
 		Status:              movie.Status,
 		Videos:              toVideoResponses(movie.Videos),
@@ -252,6 +280,19 @@ func toGenreResponses(genres []domain.Genre) []genreResponse {
 			ID:   genre.ID,
 			Name: genre.Name,
 		}
+	}
+	return responses
+}
+
+func toProductionCompaniesResponse(companies []domain.ProductionCompany) []productionCompanyResponse {
+	responses := make([]productionCompanyResponse, 0, len(companies))
+	for _, company := range companies {
+		responses = append(responses, productionCompanyResponse{
+			ID:            company.ID,
+			LogoPath:      company.LogoPath,
+			Name:          company.Name,
+			OriginCountry: company.OriginCountry,
+		})
 	}
 	return responses
 }
