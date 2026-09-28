@@ -208,12 +208,12 @@ export const getMediaById = async (type: MediaType, id: number): Promise<MediaDe
         originCountry: data.origin_country,
         originalTitle: data.original_title,
         productionCountries: data.production_countries,
-        productionCompanies: data.production_companies.map((company) => ({
+        productionCompanies: data.production_companies?.map((company) => ({
             id: company.id,
             logoPath: company.logo_path,
             name: company.name,
             originCountry: company.origin_country
-        })),
+        })) ?? [],
         popularity: data.popularity,
         status: data.status,
         videos: data.videos.map((video) => ({
