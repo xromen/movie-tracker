@@ -56,7 +56,6 @@ func (r *telegramRepository) GetUserByBindingToken(ctx context.Context, token st
 			u.username,
 			u.created_at,
 			u.updated_at,
-			u.telegram_id,
 			t.expires_at
 		FROM telegram_binding_tokens t
 			JOIN users u on t.user_id = u.id
@@ -71,7 +70,6 @@ func (r *telegramRepository) GetUserByBindingToken(ctx context.Context, token st
 		&user.Username,
 		&user.CreatedAt,
 		&user.UpdatedAt,
-		&user.TelegramId,
 		&expiresAt,
 	)
 	if err != nil {
