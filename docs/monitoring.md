@@ -41,6 +41,7 @@ Grafana загружает правила и contact point из `monitoring/graf
 Эти правила выполняет сама Grafana. При падении Grafana, Alertmanager или всего сервера сообщение может не дойти; для такого случая нужен внешний uptime-check. После выкладки проверьте статус правил в **Alerting → Alert rules** и доставку тестового сообщения. При ошибке доставки посмотрите `docker compose logs --tail=100 grafana alertmanager`.
 
 Prometheus опрашивает postgres-exporter по `postgres-exporter:9187`; exporter подключается к PostgreSQL с учётными данными `DB_USER`/`DB_PASSWORD` из `.env` и не публикует свой порт на хосте.
+Каталог `monitoring/prometheus` монтируется целиком, чтобы Prometheus видел обновления `prometheus.yml` после выкладки и автоматически перечитывал конфигурацию.
 Redis-exporter опрашивается по `redis-exporter:9121`, подключается к `redis:6379` с `REDIS_PASSWORD` из `.env` и также не публикует порт на хосте. Проверяйте отдельно `up{job="redis"}` (доступность exporter) и `redis_up{job="redis"}` (доступность самого Redis).
 Exporter и Prometheus запускаются независимо от доступности API и PostgreSQL, чтобы продолжать проверку во время их отказа.
 

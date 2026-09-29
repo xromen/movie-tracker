@@ -74,6 +74,7 @@ Alertmanager получает `TELEGRAM_API_BASE_URL` (по умолчанию `
 Для inline-конфигурации Alertmanager нужен Docker Compose не ниже 2.23.1.
 
 Профиль `monitoring` запускается самостоятельно: Prometheus опрашивает `frontend:3000` только если запущен frontend. Системный nginx отдаёт `stub_status` только на `127.0.0.1:8081`; exporter читает его через host network и по умолчанию слушает `:9113` на хосте, поэтому доступ к `9113` нужно ограничить firewall. Postgres-exporter подключается к `postgres:5432` с `DB_USER`/`DB_PASSWORD` и доступен только внутри сети Compose на `9187`. Redis-exporter подключается к `redis:6379` с `REDIS_PASSWORD` и доступен только внутри сети Compose на `9121`.
+Каталог `monitoring/prometheus` монтируется в контейнер Prometheus целиком, поэтому новая версия `prometheus.yml` видна после выкладки.
 
 | Volume | Данные |
 | --- | --- |
