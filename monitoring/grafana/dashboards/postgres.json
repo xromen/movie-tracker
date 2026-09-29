@@ -1,0 +1,64 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "panels": [
+    {
+      "id": 1, "title": "PostgreSQL доступен", "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 5, "w": 8, "x": 0, "y": 0},
+      "fieldConfig": {"defaults": {"mappings": [{"type": "value", "options": {"0": {"text": "Нет"}, "1": {"text": "Да"}}}], "thresholds": {"mode": "absolute", "steps": [{"color": "red"}, {"color": "green", "value": 1}]}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "pg_up{job=\"postgres\"}", "refId": "A"}]
+    },
+    {
+      "id": 2, "title": "Соединения", "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 5, "w": 8, "x": 8, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "sum(pg_stat_database_numbackends{job=\"postgres\"})", "refId": "A"}]
+    },
+    {
+      "id": 3, "title": "Транзакции/с", "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 5, "w": 8, "x": 16, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "sum(rate(pg_stat_database_xact_commit{job=\"postgres\"}[5m])) + sum(rate(pg_stat_database_xact_rollback{job=\"postgres\"}[5m]))", "refId": "A"}]
+    },
+    {
+      "id": 4, "title": "Транзакции по базе", "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 5},
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "targets": [
+        {"expr": "sum by (datname) (rate(pg_stat_database_xact_commit{job=\"postgres\"}[5m]))", "legendFormat": "{{datname}} commit", "refId": "A"},
+        {"expr": "sum by (datname) (rate(pg_stat_database_xact_rollback{job=\"postgres\"}[5m]))", "legendFormat": "{{datname}} rollback", "refId": "B"}
+      ]
+    },
+    {
+      "id": 5, "title": "Попадания в буферный кэш", "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 5},
+      "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}, "overrides": []},
+      "targets": [{"expr": "100 * sum by (datname) (rate(pg_stat_database_blks_hit{job=\"postgres\"}[5m])) / (sum by (datname) (rate(pg_stat_database_blks_hit{job=\"postgres\"}[5m])) + sum by (datname) (rate(pg_stat_database_blks_read{job=\"postgres\"}[5m])))", "legendFormat": "{{datname}}", "refId": "A"}]
+    },
+    {
+      "id": 6, "title": "Deadlocks/с", "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 14},
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "targets": [{"expr": "sum by (datname) (rate(pg_stat_database_deadlocks{job=\"postgres\"}[5m]))", "legendFormat": "{{datname}}", "refId": "A"}]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["movie-tracker", "postgres"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Movie Tracker PostgreSQL",
+  "uid": "movie-tracker-postgres",
+  "version": 1
+}

@@ -151,6 +151,8 @@ services:
         condition: service_started
       postgres-exporter:
         condition: service_started
+      redis-exporter:
+        condition: service_started
     restart: unless-stopped
 
   grafana:
@@ -243,6 +245,15 @@ services:
       DATA_SOURCE_URI: postgres:5432/${DB_NAME:-movietracker}?sslmode=disable
       DATA_SOURCE_USER: ${DB_USER:-postgres}
       DATA_SOURCE_PASS: ${DB_PASSWORD:-change-me}
+    restart: unless-stopped
+
+  redis-exporter:
+    profiles: ["monitoring"]
+    image: oliver006/redis_exporter:latest
+    container_name: movie-tracker-redis-exporter
+    environment:
+      REDIS_ADDR: redis://redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     restart: unless-stopped
 
   postgres:

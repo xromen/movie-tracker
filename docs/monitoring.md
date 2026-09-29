@@ -1,6 +1,6 @@
 # Мониторинг и логи
 
-В compose добавлены Prometheus, Grafana, Alertmanager, Loki, Promtail, node-exporter, nginx-exporter и postgres-exporter.
+В compose добавлены Prometheus, Grafana, Alertmanager, Loki, Promtail, node-exporter, nginx-exporter, postgres-exporter и redis-exporter.
 
 Запуск: `docker compose --profile frontend --profile monitoring up -d --build`. Профиль `monitoring` можно включить отдельно, но тогда target `movie-tracker-web` в Prometheus будет `down`, пока не запущен `frontend`.
 
@@ -17,6 +17,10 @@ Grafana автоматически подхватывает datasource `Promethe
 - `Movie Tracker API`
 - `Movie Tracker Web`
 - `Movie Tracker Nginx`
+- `Movie Tracker PostgreSQL`
+- `Movie Tracker Redis`
+
+PostgreSQL показывает доступность, число соединений, транзакции, долю попаданий в буферный кэш и deadlock по базам. Redis показывает доступность, клиентов, память, число ключей, команды, попадания/промахи и истечения/вытеснения ключей. Для скоростей используется окно 5 минут; сразу после запуска графики могут быть пустыми до накопления выборок.
 
 ## Оповещения в Telegram
 
@@ -26,7 +30,7 @@ Grafana загружает правила и contact point из `monitoring/graf
 
 | Событие | Условие | Период устойчивого условия |
 | --- | --- | --- |
-| Источник метрик недоступен | `up=0` для API, web, nginx-exporter, postgres-exporter, Loki или Promtail; ошибка запроса Prometheus тоже считается аварией | 2 минуты |
+| Источник метрик недоступен | `up=0` для API, web, nginx-exporter, postgres-exporter, redis-exporter, Loki или Promtail; ошибка запроса Prometheus тоже считается аварией | 2 минуты |
 | nginx не читается exporter | `nginx_up=0`; если exporter недоступен, сработает предыдущее правило | 2 минуты |
 | PostgreSQL недоступен | `pg_up=0` или ошибка последнего сбора postgres-exporter | 2 минуты |
 | Подозрительный всплеск трафика | nginx выше 100 RPS по среднему за 1 минуту | 3 минуты |
@@ -37,6 +41,7 @@ Grafana загружает правила и contact point из `monitoring/graf
 Эти правила выполняет сама Grafana. При падении Grafana, Alertmanager или всего сервера сообщение может не дойти; для такого случая нужен внешний uptime-check. После выкладки проверьте статус правил в **Alerting → Alert rules** и доставку тестового сообщения. При ошибке доставки посмотрите `docker compose logs --tail=100 grafana alertmanager`.
 
 Prometheus опрашивает postgres-exporter по `postgres-exporter:9187`; exporter подключается к PostgreSQL с учётными данными `DB_USER`/`DB_PASSWORD` из `.env` и не публикует свой порт на хосте.
+Redis-exporter опрашивается по `redis-exporter:9121`, подключается к `redis:6379` с `REDIS_PASSWORD` из `.env` и также не публикует порт на хосте. Проверяйте отдельно `up{job="redis"}` (доступность exporter) и `redis_up{job="redis"}` (доступность самого Redis).
 Exporter и Prometheus запускаются независимо от доступности API и PostgreSQL, чтобы продолжать проверку во время их отказа.
 
 Панель Nginx показывает активные/ожидающие/читающие/записывающие соединения и RPS из `stub_status`, доступность exporter (`up{job="nginx"}`), успешность чтения самого nginx (`nginx_up{job="nginx"}`), логи и 50 самых активных User-Agent по среднему RPM за 5 минут. RPM считается запросом LogQL по access-логам стандартного nginx `combined` format. User-Agent извлекается во время запроса и не записывается как постоянный label Loki; при другом формате access-лога запрос панели нужно изменить. Строка User-Agent задаётся клиентом и сама по себе не доказывает, что запрос сделал бот.
