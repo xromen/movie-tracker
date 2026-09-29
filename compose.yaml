@@ -135,8 +135,8 @@ services:
     container_name: movie-tracker-prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
+      - --config.auto-reload
       - --storage.tsdb.path=/prometheus
-      - --web.enable-lifecycle
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
@@ -161,8 +161,6 @@ services:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_DEFAULT_THEME: light
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      TELEGRAM_ALERT_CHAT_ID: ${TELEGRAM_ALERT_CHAT_ID:-}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -174,6 +172,20 @@ services:
         condition: service_started
       loki:
         condition: service_started
+      alertmanager:
+        condition: service_started
+    restart: unless-stopped
+
+  alertmanager:
+    profiles: ["monitoring"]
+    image: prom/alertmanager:latest
+    container_name: movie-tracker-alertmanager
+    command: --config.file=/etc/alertmanager/alertmanager.yml
+    configs:
+      - source: alertmanager
+        target: /etc/alertmanager/alertmanager.yml
+    secrets:
+      - telegram_bot_token
     restart: unless-stopped
 
   loki:
@@ -288,3 +300,24 @@ volumes:
     name: movie-tracker-go_postgres_data
   prometheus_data:
   promtail_positions:
+
+configs:
+  alertmanager:
+    content: |
+      route:
+        receiver: telegram
+        group_by: [alertname]
+        group_wait: 0s
+        group_interval: 5m
+        repeat_interval: 4h
+      receivers:
+        - name: telegram
+          telegram_configs:
+            - api_url: ${TELEGRAM_API_BASE_URL:-https://api.telegram.org}
+              bot_token_file: /run/secrets/telegram_bot_token
+              chat_id: ${TELEGRAM_ALERT_CHAT_ID:-0}
+              send_resolved: true
+
+secrets:
+  telegram_bot_token:
+    environment: TELEGRAM_BOT_TOKEN

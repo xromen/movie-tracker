@@ -5,11 +5,9 @@ contactPoints:
     name: Movie Tracker Telegram
     receivers:
       - uid: movie_tracker_telegram
-        type: telegram
+        type: prometheus-alertmanager
         settings:
-          bottoken: $TELEGRAM_BOT_TOKEN
-          chatid: |-
-            $TELEGRAM_ALERT_CHAT_ID
+          url: http://alertmanager:9093
 
 groups:
   - orgId: 1
@@ -18,7 +16,7 @@ groups:
     interval: 1m
     rules:
       - uid: movie_tracker_service_down
-        title: Сервис недоступен
+        title: Источник метрик недоступен
         condition: B
         data:
           - refId: A
@@ -52,8 +50,8 @@ groups:
         execErrState: Alerting
         for: 2m
         annotations:
-          summary: 'Не отвечает {{ $labels.job }}'
-          description: 'Prometheus не получает метрики сервиса больше 2 минут.'
+          summary: 'Prometheus не получает метрики {{ $labels.job }}'
+          description: 'Проверьте сервис, exporter и сеть между ним и Prometheus.'
         labels: {severity: critical}
         notification_settings: {receiver: Movie Tracker Telegram}
 

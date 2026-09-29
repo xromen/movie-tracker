@@ -68,7 +68,10 @@ DB pool фиксирован кодом: max 25, min 5, max lifetime 5 мину�
 
 ## Compose services, profiles и volumes
 
-Без профиля доступны `api`, `telegram-bot`, `worker`, `postgres`, `redis`. `frontend` имеет profile `frontend`. Prometheus/Grafana/Loki/Promtail/exporters имеют profile `monitoring`.
+Без профиля доступны `api`, `telegram-bot`, `worker`, `postgres`, `redis`. `frontend` имеет profile `frontend`. Prometheus/Grafana/Alertmanager/Loki/Promtail/exporters имеют profile `monitoring`.
+
+Alertmanager получает `TELEGRAM_API_BASE_URL` (по умолчанию `https://api.telegram.org`) и `TELEGRAM_ALERT_CHAT_ID` из Compose, а `TELEGRAM_BOT_TOKEN` через Compose secret. Адрес API должен быть доступен из контейнера Alertmanager; `localhost` внутри контейнера не указывает на хост. Alertmanager доступен только в сети Compose на порту `9093`.
+Для inline-конфигурации Alertmanager нужен Docker Compose не ниже 2.23.1.
 
 Профиль `monitoring` запускается самостоятельно: Prometheus опрашивает `frontend:3000` только если запущен frontend. Системный nginx отдаёт `stub_status` только на `127.0.0.1:8081`; exporter читает его через host network и по умолчанию слушает `:9113` на хосте, поэтому доступ к `9113` нужно ограничить firewall. Postgres-exporter подключается к `postgres:5432` с `DB_USER`/`DB_PASSWORD` и доступен только внутри сети Compose на `9187`.
 
