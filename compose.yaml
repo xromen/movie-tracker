@@ -145,13 +145,11 @@ services:
     ports:
       - "127.0.0.1:${PROMETHEUS_PORT:-9091}:9090"
     depends_on:
-      api:
-        condition: service_started
-      frontend:
-        condition: service_started
       nginx-exporter:
         condition: service_started
       node-exporter:
+        condition: service_started
+      postgres-exporter:
         condition: service_started
     restart: unless-stopped
 
@@ -163,6 +161,8 @@ services:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_DEFAULT_THEME: light
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_ALERT_CHAT_ID: ${TELEGRAM_ALERT_CHAT_ID:-}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -201,8 +201,6 @@ services:
     depends_on:
       loki:
         condition: service_started
-      api:
-        condition: service_started
     restart: unless-stopped
 
   node-exporter:
@@ -221,8 +219,18 @@ services:
     image: nginx/nginx-prometheus-exporter:latest
     container_name: movie-tracker-nginx-exporter
     command:
-      - --nginx.scrape-uri=http://127.0.0.1/nginx_status
+      - --nginx.scrape-uri=http://127.0.0.1:8081/nginx_status
     network_mode: host
+    restart: unless-stopped
+
+  postgres-exporter:
+    profiles: ["monitoring"]
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: movie-tracker-postgres-exporter
+    environment:
+      DATA_SOURCE_URI: postgres:5432/${DB_NAME:-movietracker}?sslmode=disable
+      DATA_SOURCE_USER: ${DB_USER:-postgres}
+      DATA_SOURCE_PASS: ${DB_PASSWORD:-change-me}
     restart: unless-stopped
 
   postgres:

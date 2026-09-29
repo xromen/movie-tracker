@@ -52,7 +52,7 @@ func (m *HTTPMetrics) Middleware() gin.HandlerFunc {
 
 		route := c.FullPath()
 		if route == "" {
-			route = c.Request.URL.Path
+			route = "<unmatched>"
 		}
 
 		m.Observe(c.Request.Method, route, c.Writer.Status(), time.Since(start).Seconds())

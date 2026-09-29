@@ -160,7 +160,7 @@
           "refId": "A"
         }
       ],
-      "title": "Nginx Exporter Up",
+      "title": "Exporter reachable",
       "type": "stat"
     },
     {
@@ -178,7 +178,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 5
+        "y": 13
       },
       "id": 5,
       "options": {
@@ -225,7 +225,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 5
+        "y": 13
       },
       "id": 6,
       "options": {
@@ -246,6 +246,80 @@
       ],
       "title": "Nginx Logs",
       "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 5
+      },
+      "id": 7,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "nginx_up{job=\"nginx\"}",
+          "refId": "A"
+        }
+      ],
+      "title": "Nginx scrape OK",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "description": "Average requests per minute over the last 5 minutes from the combined Nginx access log; only the busiest 50 User-Agents are shown.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 18,
+        "x": 6,
+        "y": 5
+      },
+      "id": 8,
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "expr": "topk(50, sum by (user_agent) (rate({job=\"nginx\", log_type=\"access\"} | regexp `\"[^\"]*\" \"(?P<user_agent>[^\"]*)\"$` [5m]))) * 60",
+          "format": "table",
+          "instant": true,
+          "queryType": "instant",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "User-Agent RPM (top 50, 5m)",
+      "type": "table"
     }
   ],
   "refresh": "10s",

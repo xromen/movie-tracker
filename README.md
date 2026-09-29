@@ -106,6 +106,16 @@ cd apps/api
 go run ./cmd/api/
 ```
 
+## Мониторинг
+
+```bash
+docker compose --profile frontend --profile monitoring up -d --build
+```
+
+Grafana доступна на `http://localhost:3001`. Для метрик nginx на Linux-сервере подключите `deploy/nginx/monitoring.conf` к системному nginx; детали проверки и дашбордов — в [docs/monitoring.md](docs/monitoring.md).
+
+Для уведомлений о падении сервисов и всплесках трафика задайте `TELEGRAM_ALERT_CHAT_ID` и `TELEGRAM_BOT_TOKEN` в `.env`; пороги и проверка доставки описаны в [docs/monitoring.md](docs/monitoring.md).
+
 ## Проверки
 
 Frontend:

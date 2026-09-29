@@ -162,7 +162,7 @@ func (r *telegramRepository) GetDueReportMessages(ctx context.Context, limit int
 
 	rows, err := r.pool.Query(ctx, query, limit)
 	if err != nil {
-		return nil, fmt.Errorf("get due report messages: %w")
+		return nil, fmt.Errorf("get due report messages: %w", err)
 	}
 	defer rows.Close()
 

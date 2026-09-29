@@ -1,0 +1,221 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: Movie Tracker Telegram
+    receivers:
+      - uid: movie_tracker_telegram
+        type: telegram
+        settings:
+          bottoken: $TELEGRAM_BOT_TOKEN
+          chatid: |-
+            $TELEGRAM_ALERT_CHAT_ID
+
+groups:
+  - orgId: 1
+    name: Movie Tracker incidents
+    folder: Movie Tracker
+    interval: 1m
+    rules:
+      - uid: movie_tracker_service_down
+        title: Сервис недоступен
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              datasource: {type: prometheus, uid: prometheus}
+              editorMode: code
+              expr: up{job=~"movie-tracker-api|movie-tracker-web|nginx|loki|promtail|postgres"}
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              type: threshold
+              refId: B
+              conditions:
+                - evaluator: {type: lt, params: [0.5]}
+                  operator: {type: and}
+                  query: {params: [B]}
+                  reducer: {type: last, params: []}
+                  type: query
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 2m
+        annotations:
+          summary: 'Не отвечает {{ $labels.job }}'
+          description: 'Prometheus не получает метрики сервиса больше 2 минут.'
+        labels: {severity: critical}
+        notification_settings: {receiver: Movie Tracker Telegram}
+
+      - uid: movie_tracker_nginx_scrape_failed
+        title: Nginx stub_status недоступен
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              datasource: {type: prometheus, uid: prometheus}
+              editorMode: code
+              expr: nginx_up{job="nginx"}
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              type: threshold
+              refId: B
+              conditions:
+                - evaluator: {type: lt, params: [0.5]}
+                  operator: {type: and}
+                  query: {params: [B]}
+                  reducer: {type: last, params: []}
+                  type: query
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        annotations:
+          summary: 'Exporter не может прочитать nginx stub_status'
+          description: 'Проверьте системный nginx и http://127.0.0.1:8081/nginx_status.'
+        labels: {severity: critical}
+        notification_settings: {receiver: Movie Tracker Telegram}
+
+      - uid: movie_tracker_postgres_failed
+        title: PostgreSQL недоступен
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              datasource: {type: prometheus, uid: prometheus}
+              editorMode: code
+              expr: (1 - pg_up{job="postgres"}) + pg_exporter_last_scrape_error{job="postgres"}
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              type: threshold
+              refId: B
+              conditions:
+                - evaluator: {type: gt, params: [0.5]}
+                  operator: {type: and}
+                  query: {params: [B]}
+                  reducer: {type: last, params: []}
+                  type: query
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        annotations:
+          summary: 'PostgreSQL не отвечает exporter'
+          description: 'Проверьте контейнер postgres и соединение с базой.'
+        labels: {severity: critical}
+        notification_settings: {receiver: Movie Tracker Telegram}
+
+      - uid: movie_tracker_nginx_high_rps
+        title: Резкий рост запросов к nginx
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              datasource: {type: prometheus, uid: prometheus}
+              editorMode: code
+              expr: rate(nginx_http_requests_total[1m])
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              type: threshold
+              refId: B
+              conditions:
+                - evaluator: {type: gt, params: [100]}
+                  operator: {type: and}
+                  query: {params: [B]}
+                  reducer: {type: last, params: []}
+                  type: query
+        noDataState: OK
+        execErrState: Error
+        for: 3m
+        annotations:
+          summary: 'nginx получает больше 100 запросов в секунду'
+          description: 'Проверьте access-логи, URL, IP и User-Agent: высокий RPS сам по себе не доказывает DDoS.'
+        labels: {severity: warning}
+        notification_settings: {receiver: Movie Tracker Telegram}
+
+      - uid: movie_tracker_api_high_5xx
+        title: Ошибки API 5xx
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              datasource: {type: prometheus, uid: prometheus}
+              editorMode: code
+              expr: >-
+                (sum(rate(movie_tracker_api_http_requests_total{status=~"5.."}[5m]))
+                / clamp_min(sum(rate(movie_tracker_api_http_requests_total[5m])), 0.001))
+                and (sum(increase(movie_tracker_api_http_requests_total[5m])) >= 100)
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              type: threshold
+              refId: B
+              conditions:
+                - evaluator: {type: gt, params: [0.05]}
+                  operator: {type: and}
+                  query: {params: [B]}
+                  reducer: {type: last, params: []}
+                  type: query
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: 'Более 5% запросов API завершились 5xx'
+          description: 'За последние 5 минут было не менее 100 запросов; проверьте API-логи и зависимости.'
+        labels: {severity: warning}
+        notification_settings: {receiver: Movie Tracker Telegram}
