@@ -296,7 +296,7 @@ func (w *Worker) createReport(ctx context.Context, report domain.DueReport) erro
 
 	episodesForReport, err := w.repo.GetTvEpisodesForReport(ctx, report.UserID, report.PeriodFrom, periodFuture)
 	if err != nil {
-		return fmt.Errorf("get episodes for report: %w")
+		return fmt.Errorf("get episodes for report: %w", err)
 	}
 
 	messages := buildReportMessages(report.PeriodFrom, report.PeriodTo, periodFuture, moviesForReport, episodesForReport)
@@ -307,7 +307,7 @@ func (w *Worker) createReport(ctx context.Context, report domain.DueReport) erro
 			UserID:               report.UserID,
 			PeriodFrom:           report.PeriodFrom,
 			PeriodTo:             report.PeriodTo,
-			NextScheduleCreateAt: time.Now().Add(interval),
+			NextScheduleCreateAt: report.LatestCreatedAt.Add(interval),
 		},
 		messages,
 	)
