@@ -307,7 +307,7 @@ func (w *Worker) createReport(ctx context.Context, report domain.DueReport) erro
 			UserID:               report.UserID,
 			PeriodFrom:           report.PeriodFrom,
 			PeriodTo:             report.PeriodTo,
-			NextScheduleCreateAt: report.LatestCreatedAt.Add(interval),
+			NextScheduleCreateAt: report.LatestNextScheduleCreateAt.Add(interval),
 		},
 		messages,
 	)

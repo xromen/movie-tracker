@@ -94,7 +94,6 @@ func (h *UserHandler) Refresh(c *gin.Context) {
 	out, err := h.userService.Refresh(c.Request.Context(), *refreshToken)
 	if err != nil {
 		h.logger.Error("error refresh token",
-			"token", refreshToken,
 			"error", err,
 		)
 		c.AbortWithStatusJSON(http.StatusUnauthorized, errorResponse("refresh token invalid"))

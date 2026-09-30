@@ -1,0 +1,75 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "panels": [
+    {
+      "id": 1, "title": "Redis доступен", "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0},
+      "fieldConfig": {"defaults": {"mappings": [{"type": "value", "options": {"0": {"text": "Нет"}, "1": {"text": "Да"}}}], "thresholds": {"mode": "absolute", "steps": [{"color": "red"}, {"color": "green", "value": 1}]}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "redis_up{job=\"redis\"}", "refId": "A"}]
+    },
+    {
+      "id": 2, "title": "Клиенты", "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 5, "w": 6, "x": 6, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "redis_connected_clients{job=\"redis\"}", "refId": "A"}]
+    },
+    {
+      "id": 3, "title": "Использовано памяти", "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 5, "w": 6, "x": 12, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "redis_memory_used_bytes{job=\"redis\"}", "refId": "A"}]
+    },
+    {
+      "id": 4, "title": "Ключи", "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 5, "w": 6, "x": 18, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "sum(redis_db_keys{job=\"redis\"})", "refId": "A"}]
+    },
+    {
+      "id": 5, "title": "Команды/с", "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 5},
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "targets": [{"expr": "rate(redis_commands_processed_total{job=\"redis\"}[5m])", "refId": "A"}]
+    },
+    {
+      "id": 6, "title": "Попадания и промахи кэша/с", "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 5},
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "targets": [
+        {"expr": "rate(redis_keyspace_hits_total{job=\"redis\"}[5m])", "legendFormat": "hit", "refId": "A"},
+        {"expr": "rate(redis_keyspace_misses_total{job=\"redis\"}[5m])", "legendFormat": "miss", "refId": "B"}
+      ]
+    },
+    {
+      "id": 7, "title": "Истечения и вытеснения ключей/с", "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 14},
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "targets": [
+        {"expr": "rate(redis_expired_keys_total{job=\"redis\"}[5m])", "legendFormat": "expired", "refId": "A"},
+        {"expr": "rate(redis_evicted_keys_total{job=\"redis\"}[5m])", "legendFormat": "evicted", "refId": "B"}
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["movie-tracker", "redis"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Movie Tracker Redis",
+  "uid": "movie-tracker-redis",
+  "version": 1
+}
