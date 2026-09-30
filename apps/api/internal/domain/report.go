@@ -12,12 +12,12 @@ type Report struct {
 }
 
 type DueReport struct {
-	LatestReportID  int64
-	UserID          int64
-	PeriodFrom      time.Time
-	PeriodTo        time.Time
-	Interval        int
-	LatestCreatedAt time.Time
+	LatestReportID             int64
+	UserID                     int64
+	PeriodFrom                 time.Time
+	PeriodTo                   time.Time
+	Interval                   int
+	LatestNextScheduleCreateAt time.Time
 }
 
 type ReportMovie struct {

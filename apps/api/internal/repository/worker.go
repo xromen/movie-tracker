@@ -148,7 +148,7 @@ func (r *workerRepository) ListUsersDueForReport(ctx context.Context, limit int)
 			r.period_from + r.interval AS period_from,
 			r.period_to + r.interval AS period_to,
 			r.interval,
-			r.created_at as latest_created_at
+			r.next_schedule_create_at as latest_next_schedule_create_at
 		FROM latest_reports r
 		WHERE r.next_schedule_create_at <= NOW()
 		LIMIT $1;
@@ -171,7 +171,7 @@ func (r *workerRepository) ListUsersDueForReport(ctx context.Context, limit int)
 			&report.PeriodFrom,
 			&report.PeriodTo,
 			&report.Interval,
-			&report.LatestCreatedAt,
+			&report.LatestNextScheduleCreateAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan user due for report: %w", err)
 		}
