@@ -57,6 +57,22 @@ PostgreSQL показывает доступность, число соедин�
 
 Метрики идут от существующего node-exporter с `job="node"`. Для корректной сети хоста он работает в host network/PID namespace, root filesystem монтируется read-only с `rslave`. Listener `host.docker.internal:9100` привязан к адресу Docker gateway через `extra_hosts: host-gateway`; exporter не слушает `0.0.0.0:9100`. Prometheus опрашивает этот же адрес. Gateway должен быть доступен из сети Compose. Схема host namespaces и root mount основана на [рекомендациях node-exporter](https://github.com/prometheus/node_exporter#docker).
 
+При host network пустой столбец `PORTS` в `docker ps` ожидаем: exporter использует сетевой namespace хоста без публикации порта. Если target `node` имеет `health=down` и `context deadline exceeded`, проверьте listener и подсеть Prometheus:
+
+```bash
+docker compose logs --tail=30 node-exporter
+docker inspect movie-tracker-prometheus --format '{{json .NetworkSettings.Networks}}'
+sudo ufw status verbose
+```
+
+Проверьте `/metrics` с хоста по адресу из строки `Listening on`. Если он быстро отвечает `200`, а UFW запрещает входящие соединения и не разрешает `9100` из сети Compose, добавьте точечное правило. Например, для подсети Prometheus `172.20.0.0/16` и listener `172.17.0.1:9100`:
+
+```bash
+sudo ufw allow proto tcp from 172.20.0.0/16 to 172.17.0.1 port 9100 comment 'Movie Tracker node-exporter'
+```
+
+Подставьте фактические подсеть и адрес listener; доступ нужен только из сети Compose. При изменении этой сети актуализируйте правило. Перезапуск контейнеров после изменения UFW не требуется: через два интервала сбора (около 30 секунд) проверьте `up{job="node"}=1`. Графикам скоростей нужны минимум две выборки.
+
 Правила находятся в `monitoring/grafana/provisioning/alerting/system.json`, группе `Movie Tracker system`, вычисляются раз в минуту и отправляют события в существующий `Movie Tracker Telegram`. Каждое правило связано с соответствующей панелью дашборда. Для нехватки ресурсов заданы два уровня:
 
 | Событие | Условие | Устойчивость | Уровень |
