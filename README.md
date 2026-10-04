@@ -112,10 +112,12 @@ go run ./cmd/api/
 docker compose --profile frontend --profile monitoring up -d --build
 ```
 
-Grafana доступна на `http://localhost:3001`; дашборды PostgreSQL и Redis загружаются автоматически. Для метрик nginx на Linux-сервере подключите `deploy/nginx/monitoring.conf` к системному nginx; детали проверки и дашбордов — в [docs/monitoring.md](docs/monitoring.md).
+Grafana доступна на `http://localhost:3001`; системный дашборд `Movie Tracker System` и дашборды PostgreSQL/Redis загружаются автоматически. Системный дашборд показывает CPU, RAM, swap, load, диски, inode, I/O, сеть и OOM. Для метрик nginx на Linux-сервере подключите `deploy/nginx/monitoring.conf` к системному nginx; детали проверки и дашбордов — в [docs/monitoring.md](docs/monitoring.md).
+Для доступа к Grafana через HTTPS-домен задайте `GRAFANA_ROOT_URL`; настройка внешнего URL и диагностика заполненного диска приведены там же.
 
-Для уведомлений о падении сервисов и всплесках трафика задайте `TELEGRAM_ALERT_CHAT_ID` и `TELEGRAM_BOT_TOKEN` в `.env`; пороги и проверка доставки описаны в [docs/monitoring.md](docs/monitoring.md).
+Для уведомлений о падении сервисов, нехватке системных ресурсов и всплесках трафика задайте `TELEGRAM_ALERT_CHAT_ID` и `TELEGRAM_BOT_TOKEN` в `.env`; пороги и проверка доставки описаны в [docs/monitoring.md](docs/monitoring.md).
 Если сервер не может обратиться к Telegram напрямую, задайте `TELEGRAM_API_BASE_URL` — бот и Alertmanager используют один адрес API. После изменения перезапустите стек мониторинга.
+Уведомления мониторинга используют короткий шаблон с ограничением длины для Telegram; полная информация об алертах остаётся в Grafana.
 
 ## Проверки
 

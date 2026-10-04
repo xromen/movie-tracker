@@ -104,6 +104,9 @@ jobs:
         with:
           clean: false
 
+      - name: Trim unused Docker build cache
+        run: docker builder prune --all --force --keep-storage 5GB
+
       - name: Build and start stack
         run: docker compose --parallel 1 --profile frontend --profile monitoring up --build --detach --remove-orphans
 

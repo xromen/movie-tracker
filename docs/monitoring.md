@@ -12,6 +12,34 @@
 - API metrics: `http://localhost:8080/metrics`
 - Web metrics: `http://localhost:3000/api/metrics`
 
+## Grafana за nginx
+
+Для отдельного HTTPS-домена задайте в серверном `.env` полный внешний URL со слешем в конце:
+
+```env
+GRAFANA_ROOT_URL=https://grafana.movietracker.ru/
+```
+
+Compose передаёт его в `GF_SERVER_ROOT_URL`. Без переопределения используется `http://localhost:${GRAFANA_PORT:-3001}/`. Для отдельного домена без подпути `serve_from_sub_path` не нужен. После изменения пересоздайте Grafana:
+
+```bash
+docker compose --profile monitoring up -d --force-recreate grafana
+```
+
+Системный nginx должен проксировать корень домена в `http://127.0.0.1:${GRAFANA_PORT:-3001}` с исходным Host и поддержкой WebSocket для `/api/live/`. Настройки URL и reverse proxy описаны в [документации Grafana](https://grafana.com/tutorials/run-grafana-behind-a-proxy/).
+
+При странице «Grafana has failed to load its application files» проверьте в браузере Network полную загрузку `/public/build/*.js` и ошибки Console. Ответ `200` на HEAD или работающий `/api/health` ещё не подтверждают загрузку тела файла. Если большие файлы обрываются, сравните скачивание одного и того же JS напрямую с `127.0.0.1:3001` и через HTTPS-домен (путь возьмите из Network):
+
+```bash
+curl -fsS http://127.0.0.1:3001/public/build/FILE.js -o /dev/null -w '%{size_download}\n'
+curl -fsS https://grafana.movietracker.ru/public/build/FILE.js -o /dev/null -w '%{size_download}\n'
+sudo nginx -T 2>&1 | grep -E 'error_log|proxy_temp_path'
+df -h
+df -i
+```
+
+Проверьте активный error log из `nginx -T`, свободное место и права пользователя nginx на временный каталог. Если причина — заполненный диск, сначала восстановите свободное место и повторите скачивание; при успешной передаче изменение буферизации не требуется. `root_url` исправляет внешние ссылки и редиректы; обрыв передачи JS диагностируется отдельно. После восстановления обновите страницу без кэша.
+
 Grafana автоматически подхватывает datasource `Prometheus` и `Loki`, а также дашборды:
 
 - `Movie Tracker API`
@@ -19,8 +47,39 @@ Grafana автоматически подхватывает datasource `Promethe
 - `Movie Tracker Nginx`
 - `Movie Tracker PostgreSQL`
 - `Movie Tracker Redis`
+- `Movie Tracker System`
 
 PostgreSQL показывает доступность, число соединений, транзакции, долю попаданий в буферный кэш и deadlock по базам. Redis показывает доступность, клиентов, память, число ключей, команды, попадания/промахи и истечения/вытеснения ключей. Для скоростей используется окно 5 минут; сразу после запуска графики могут быть пустыми до накопления выборок.
+
+### Системный дашборд и алерты
+
+`Movie Tracker System` (`/d/movie-tracker-system`) загружается из `monitoring/grafana/dashboards/system.json` и содержит 16 панелей: доступность node-exporter, CPU и I/O wait, доступную RAM, доступное место на `/`, uptime, load на ядро, RAM в байтах, swap, свободное место и inode по разделам, дисковый I/O, сеть хоста и OOM. RAM считается через `MemAvailable`, а не только `MemFree`: освобождаемый кэш не создаёт ложный алерт. Load нормализуется по количеству CPU-ядер. Отсутствующий swap отображается нулевым объёмом. Скорости вычисляются за 5 минут.
+
+Метрики идут от существующего node-exporter с `job="node"`. Для корректной сети хоста он работает в host network/PID namespace, root filesystem монтируется read-only с `rslave`. Listener `host.docker.internal:9100` привязан к адресу Docker gateway через `extra_hosts: host-gateway`; exporter не слушает `0.0.0.0:9100`. Prometheus опрашивает этот же адрес. Gateway должен быть доступен из сети Compose. Схема host namespaces и root mount основана на [рекомендациях node-exporter](https://github.com/prometheus/node_exporter#docker).
+
+Правила находятся в `monitoring/grafana/provisioning/alerting/system.json`, группе `Movie Tracker system`, вычисляются раз в минуту и отправляют события в существующий `Movie Tracker Telegram`. Каждое правило связано с соответствующей панелью дашборда. Для нехватки ресурсов заданы два уровня:
+
+| Событие | Условие | Устойчивость | Уровень |
+| --- | --- | --- | --- |
+| Мало доступной RAM | менее 15% / менее 5% | 5 минут / 2 минуты | warning / critical |
+| Мало места на разделе | менее 20% / менее 10% доступных байтов | 10 минут / 5 минут | warning / critical |
+| Мало inode на разделе | менее 10% / менее 3% свободных inode | 10 минут / 5 минут | warning / critical |
+| Высокая загрузка CPU | выше 90%, среднее по ядрам за 5 минут | 10 минут | warning |
+| Высокий I/O wait | выше 20%, среднее по ядрам за 5 минут | 10 минут | warning |
+| Высокий системный load | load15 / число ядер выше 1.5 | 15 минут | warning |
+| OOM killer завершил процесс | `increase(node_vmstat_oom_kill[5m]) > 0.5` | без дополнительного ожидания | critical |
+| Node-exporter недоступен | `up{job="node"}=0`, общее правило доступности | 2 минуты | critical |
+
+Дисковые правила и графики по разделам исключают tmpfs, devtmpfs, overlay, squashfs, nsfs, `/run` и внутренние mounts Docker/containerd/kubelet. Read-only разделы и разделы без положительного размера/числа inode не вызывают low-space/low-inode алерты. Пороги меняются в `data[1].model.conditions[0].evaluator.params`, длительность — в `for`. Если critical условие устойчиво достаточно долго, одновременно могут быть активны warning и critical. Отсутствие системной метрики (`NoData`) не порождает отдельный ресурсный алерт: доступность exporter/Prometheus проверяет общее правило; ошибки запросов имеют состояние `Error`.
+
+При обычной CI-выкладке Compose пересоздаёт node-exporter из-за изменённых параметров, а Prometheus автоматически перечитывает конфигурацию. Новые правила алертов Grafana загружаются при запуске: если Grafana не перезапустилась во время выкладки, достаточно перезапустить только её:
+
+```bash
+docker compose --profile monitoring restart grafana
+curl -fsS 'http://127.0.0.1:9091/api/v1/query?query=up%7Bjob%3D%22node%22%7D'
+```
+
+Для вашего `PROMETHEUS_PORT` замените `9091` при необходимости. Ожидается `up=1` с instance `host.docker.internal:9100`. Затем откройте `Movie Tracker System`, проверьте правила группы `Movie Tracker system` в Grafana Alerting и тест доставки существующего contact point. Проверьте формулы до выкладки командой `python monitoring/check_system.py /path/to/promtool`: используется стандартная библиотека Python и официальный promtool; покрыты все запросы панелей, warning/critical, границы порогов, pending, OOM и исключённые mounts.
 
 ## Оповещения в Telegram
 
@@ -28,9 +87,16 @@ Grafana загружает правила и contact point из `monitoring/graf
 
 Встроенный Telegram contact point Grafana не поддерживает смену базового адреса API, поэтому уведомления идут через Alertmanager. Если прокси работает по обычному HTTP через внешнюю сеть, токен бота передаётся ему без шифрования; используйте HTTPS или закрытый канал. Не публикуйте порт `9093` наружу.
 
+Alertmanager использует `monitoring/alertmanager/telegram.tmpl` и `parse_mode: ""` (обычный текст). Сообщение содержит количество проблем и восстановлений, summary, job/instance и причину `NoData`/`MissingSeries`, если она передана Grafana. Служебные labels/annotations не выводятся. Показываются максимум пять событий; длина каждого поля ограничена, а для большей группы выводится общее число и предложение открыть Grafana. Это удерживает сообщение ниже лимита Telegram в 4096 символов, включая текст с emoji. После обновления шаблона или Compose пересоздайте Alertmanager командой выше. Проверка шаблона не отправляет сообщения:
+
+```bash
+cd monitoring/alertmanager
+go test -v telegram_test.go
+```
+
 | Событие | Условие | Период устойчивого условия |
 | --- | --- | --- |
-| Источник метрик недоступен | `up=0` для API, web, nginx-exporter, postgres-exporter, redis-exporter, Loki или Promtail; ошибка запроса Prometheus тоже считается аварией | 2 минуты |
+| Источник метрик недоступен | `up=0` для API, web, nginx-exporter, postgres-exporter, redis-exporter, Loki, Promtail или node-exporter; ошибка запроса Prometheus тоже считается аварией | 2 минуты |
 | nginx не читается exporter | `nginx_up=0`; если exporter недоступен, сработает предыдущее правило | 2 минуты |
 | PostgreSQL недоступен | `pg_up=0` или ошибка последнего сбора postgres-exporter | 2 минуты |
 | Подозрительный всплеск трафика | nginx выше 100 RPS по среднему за 1 минуту | 3 минуты |
@@ -39,6 +105,39 @@ Grafana загружает правила и contact point из `monitoring/graf
 Порог RPS меняется в `monitoring/grafana/provisioning/alerting/alerts.yml` (`evaluator.params` правила `movie_tracker_nginx_high_rps`). Это стартовый порог: сравните его с обычными пиками, затем подстройте. Уведомление о трафике означает необходимость проверить логи, IP, URL и User-Agent; высокий RPS сам по себе не доказывает DDoS. Grafana отправляет также сообщение о восстановлении по умолчанию. Если запущен только профиль `monitoring`, незапущенный frontend вызовет алерт о web.
 
 Эти правила выполняет сама Grafana. При падении Grafana, Alertmanager или всего сервера сообщение может не дойти; для такого случая нужен внешний uptime-check. После выкладки проверьте статус правил в **Alerting → Alert rules** и доставку тестового сообщения. При ошибке доставки посмотрите `docker compose logs --tail=100 grafana alertmanager`.
+
+`grafana_state_reason=NoData` с `__values__={"A":-1,"B":-1}` означает отсутствие данных для вычисления правила, а не измеренное `up=0`. `MissingSeries` означает, что ранее наблюдавшийся ряд исчез. Не отключайте аварийное состояние только ради устранения сообщений: сначала проверьте Prometheus и targets:
+
+```bash
+docker compose --profile monitoring ps
+curl -fsS 'http://127.0.0.1:9091/api/v1/query?query=up'
+curl -fsS 'http://127.0.0.1:9091/api/v1/targets?state=active'
+docker compose logs --tail=100 prometheus grafana postgres-exporter
+```
+
+Если `PROMETHEUS_PORT` переопределён, используйте его вместо `9091`. Пустой result требует проверки scrape config, targets и логов Prometheus. Если ряды `up` присутствуют, проверьте в Grafana datasource `Prometheus` (`http://prometheus:9090`) и выполнение запроса правила через Preview. Ошибка интерфейса Grafana и `NoData` сами по себе не доказывают общую причину.
+
+### Заполненный диск
+
+Если targets имеют `health=up`, но запрос `up` пустой, проверьте ошибки `Scrape commit failed` и `write to WAL ... no space left on device`. Prometheus может успешно опрашивать сервисы, но не сохранять результаты. Заполненный корневой раздел также может прерывать большие ответы nginx при записи proxy temp files и мешать записи в журналы.
+
+```bash
+df -h
+df -i
+docker system df
+sudo du -xhd1 /var/lib/docker /var/log 2>/dev/null | sort -h
+```
+
+Очистку выбирайте по измеренному источнику роста: неиспользуемый build cache и устаревшие образы, ротация Docker/системных логов или расширение диска. Не удаляйте `prometheus_data`, WAL или PostgreSQL volume для освобождения места: это уничтожит сохранённые данные. Сначала освободите место, затем проверьте возобновление записи и повторите запрос `up`; перезапустите Prometheus только если запись не возобновилась. После восстановления проверьте правила Grafana и полную загрузку её JS через nginx. Ограничения хранения и сборка мусора должны настраиваться для того компонента, который занял диск.
+
+Если `docker system df` показывает большой reclaimable build cache, освободите неиспользуемые слои, оставив до 5 ГБ кэша:
+
+```bash
+docker builder prune --all --keep-storage 5GB
+df -h /
+```
+
+Команда запросит подтверждение и удалит только неиспользуемый build cache; следующая сборка может стать медленнее. Данные volumes и работающие контейнеры сохраняются. CI выполняет такую очистку перед production-сборкой с `--force`. Это не жёсткая квота и не ограничение размеров логов/volumes; поддерживайте свободное место и после сборки. Семантика параметров — в [документации Docker](https://docs.docker.com/reference/cli/docker/builder/prune/).
 
 Prometheus опрашивает postgres-exporter по `postgres-exporter:9187`; exporter подключается к PostgreSQL с учётными данными `DB_USER`/`DB_PASSWORD` из `.env` и не публикует свой порт на хосте.
 Каталог `monitoring/prometheus` монтируется целиком, чтобы Prometheus видел обновления `prometheus.yml` после выкладки и автоматически перечитывал конфигурацию.

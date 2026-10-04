@@ -25,7 +25,7 @@ groups:
             model:
               datasource: {type: prometheus, uid: prometheus}
               editorMode: code
-              expr: up{job=~"movie-tracker-api|movie-tracker-web|nginx|loki|promtail|postgres|redis"}
+              expr: up{job=~"movie-tracker-api|movie-tracker-web|nginx|loki|promtail|postgres|redis|node"}
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200

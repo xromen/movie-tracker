@@ -163,6 +163,7 @@ services:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_DEFAULT_THEME: light
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:${GRAFANA_PORT:-3001}/}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -188,6 +189,8 @@ services:
         target: /etc/alertmanager/alertmanager.yml
     secrets:
       - telegram_bot_token
+    volumes:
+      - ./monitoring/alertmanager:/etc/alertmanager/templates:ro
     restart: unless-stopped
 
   loki:
@@ -223,9 +226,13 @@ services:
     container_name: movie-tracker-node-exporter
     command:
       - --path.rootfs=/host
+      - --web.listen-address=host.docker.internal:9100
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    network_mode: host
     pid: host
     volumes:
-      - /:/host:ro
+      - /:/host:ro,rslave
     restart: unless-stopped
 
   nginx-exporter:
@@ -315,6 +322,8 @@ volumes:
 configs:
   alertmanager:
     content: |
+      templates:
+        - /etc/alertmanager/templates/*.tmpl
       route:
         receiver: telegram
         group_by: [alertname]
@@ -328,6 +337,8 @@ configs:
               bot_token_file: /run/secrets/telegram_bot_token
               chat_id: ${TELEGRAM_ALERT_CHAT_ID:-0}
               send_resolved: true
+              parse_mode: ""
+              message: '{{ template "movie_tracker.telegram" . }}'
 
 secrets:
   telegram_bot_token:

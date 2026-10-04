@@ -1,0 +1,9 @@
+{{ define "movie_tracker.telegram" -}}
+Movie Tracker: проблем — {{ len .Alerts.Firing }}, восстановлено — {{ len .Alerts.Resolved }}
+{{ range $i, $alert := .Alerts }}{{ if lt $i 5 }}
+{{ if eq .Status "firing" }}ПРОБЛЕМА{{ else }}ВОССТАНОВЛЕНО{{ end }}: {{ if .Annotations.summary }}{{ printf "%.120s" .Annotations.summary }}{{ else }}{{ printf "%.120s" .Labels.alertname }}{{ end }}
+{{ if .Labels.job }}Сервис: {{ printf "%.60s" .Labels.job }}{{ end }}{{ if .Labels.instance }} ({{ printf "%.100s" .Labels.instance }}){{ end }}
+{{ if .Annotations.grafana_state_reason }}Причина: {{ printf "%.40s" .Annotations.grafana_state_reason }}
+{{ end }}{{ end }}{{ end }}
+{{ if gt (len .Alerts) 5 }}Показаны первые 5 из {{ len .Alerts }}. Остальные — в Grafana.{{ end }}
+{{- end }}

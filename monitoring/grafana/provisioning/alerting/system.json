@@ -1,0 +1,823 @@
+{
+  "apiVersion": 1,
+  "groups": [
+    {
+      "orgId": 1,
+      "name": "Movie Tracker system",
+      "folder": "Movie Tracker",
+      "interval": "1m",
+      "rules": [
+        {
+          "uid": "movie_tracker_system_memory_warning",
+          "title": "Мало доступной памяти — предупреждение",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "editorMode": "code",
+                "expr": "100 * node_memory_MemAvailable_bytes{job=\"node\"} / node_memory_MemTotal_bytes{job=\"node\"}",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "range": false,
+                "refId": "A"
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "model": {
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "type": "threshold",
+                "refId": "B",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "lt",
+                      "params": [
+                        15
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "query": {
+                      "params": [
+                        "B"
+                      ]
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    },
+                    "type": "query"
+                  }
+                ]
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "for": "5m",
+          "annotations": {
+            "summary": "Память {{ $labels.instance }}: доступно {{ printf \"%.1f\" $values.A.Value }}%",
+            "description": "Проверьте потребление RAM процессами и контейнерами, OOM и swap. Используется MemAvailable с учётом освобождаемого кэша.",
+            "__dashboardUid__": "movie-tracker-system",
+            "__panelId__": "9"
+          },
+          "labels": {
+            "severity": "warning"
+          },
+          "notification_settings": {
+            "receiver": "Movie Tracker Telegram"
+          }
+        },
+        {
+          "uid": "movie_tracker_system_memory_critical",
+          "title": "Мало доступной памяти — критично",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "editorMode": "code",
+                "expr": "100 * node_memory_MemAvailable_bytes{job=\"node\"} / node_memory_MemTotal_bytes{job=\"node\"}",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "range": false,
+                "refId": "A"
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "model": {
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "type": "threshold",
+                "refId": "B",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "lt",
+                      "params": [
+                        5
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "query": {
+                      "params": [
+                        "B"
+                      ]
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    },
+                    "type": "query"
+                  }
+                ]
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "for": "2m",
+          "annotations": {
+            "summary": "Память {{ $labels.instance }}: доступно {{ printf \"%.1f\" $values.A.Value }}%",
+            "description": "Проверьте потребление RAM процессами и контейнерами, OOM и swap. Используется MemAvailable с учётом освобождаемого кэша.",
+            "__dashboardUid__": "movie-tracker-system",
+            "__panelId__": "9"
+          },
+          "labels": {
+            "severity": "critical"
+          },
+          "notification_settings": {
+            "receiver": "Movie Tracker Telegram"
+          }
+        },
+        {
+          "uid": "movie_tracker_system_disk_warning",
+          "title": "Мало места на диске — предупреждение",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "editorMode": "code",
+                "expr": "(100 * node_filesystem_avail_bytes{job=\"node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs|nsfs\",mountpoint!~\"/(run|var/lib/docker|var/lib/containerd|var/lib/kubelet)(/.*)?\"} / node_filesystem_size_bytes{job=\"node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs|nsfs\",mountpoint!~\"/(run|var/lib/docker|var/lib/containerd|var/lib/kubelet)(/.*)?\"}) and (node_filesystem_readonly{job=\"node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs|nsfs\",mountpoint!~\"/(run|var/lib/docker|var/lib/containerd|var/lib/kubelet)(/.*)?\"} == 0) and (node_filesystem_size_bytes{job=\"node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs|nsfs\",mountpoint!~\"/(run|var/lib/docker|var/lib/containerd|var/lib/kubelet)(/.*)?\"} > 0)",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "range": false,
+                "refId": "A"
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "model": {
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "type": "threshold",
+                "refId": "B",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "lt",
+                      "params": [
+                        20
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "query": {
+                      "params": [
+                        "B"
+                      ]
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    },
+                    "type": "query"
+                  }
+                ]
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "for": "10m",
+          "annotations": {
+            "summary": "Диск {{ $labels.mountpoint }}: свободно {{ printf \"%.1f\" $values.A.Value }}%",
+            "description": "Проверьте df -h, docker system df, рост логов и build cache. Не удаляйте volumes PostgreSQL или WAL Prometheus.",
+            "__dashboardUid__": "movie-tracker-system",
+            "__panelId__": "12"
+          },
+          "labels": {
+            "severity": "warning"
+          },
+          "notification_settings": {
+            "receiver": "Movie Tracker Telegram"
+          }
+        },
+        {
+          "uid": "movie_tracker_system_disk_critical",
+          "title": "Мало места на диске — критично",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "editorMode": "code",
+                "expr": "(100 * node_filesystem_avail_bytes{job=\"node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs|nsfs\",mountpoint!~\"/(run|var/lib/docker|var/lib/containerd|var/lib/kubelet)(/.*)?\"} / node_filesystem_size_bytes{job=\"node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs|nsfs\",mountpoint!~\"/(run|var/lib/docker|var/lib/containerd|var/lib/kubelet)(/.*)?\"}) and (node_filesystem_readonly{job=\"node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs|nsfs\",mountpoint!~\"/(run|var/lib/docker|var/lib/containerd|var/lib/kubelet)(/.*)?\"} == 0) and (node_filesystem_size_bytes{job=\"node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs|nsfs\",mountpoint!~\"/(run|var/lib/docker|var/lib/containerd|var/lib/kubelet)(/.*)?\"} > 0)",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "range": false,
+                "refId": "A"
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "model": {
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "type": "threshold",
+                "refId": "B",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "lt",
+                      "params": [
+                        10
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "query": {
+                      "params": [
+                        "B"
+                      ]
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    },
+                    "type": "query"
+                  }
+                ]
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "for": "5m",
+          "annotations": {
+            "summary": "Диск {{ $labels.mountpoint }}: свободно {{ printf \"%.1f\" $values.A.Value }}%",
+            "description": "Проверьте df -h, docker system df, рост логов и build cache. Не удаляйте volumes PostgreSQL или WAL Prometheus.",
+            "__dashboardUid__": "movie-tracker-system",
+            "__panelId__": "12"
+          },
+          "labels": {
+            "severity": "critical"
+          },
+          "notification_settings": {
+            "receiver": "Movie Tracker Telegram"
+          }
+        },
+        {
+          "uid": "movie_tracker_system_inodes_warning",
+          "title": "Мало свободных inode — предупреждение",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "editorMode": "code",
+                "expr": "(100 * node_filesystem_files_free{job=\"node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs|nsfs\",mountpoint!~\"/(run|var/lib/docker|var/lib/containerd|var/lib/kubelet)(/.*)?\"} / node_filesystem_files{job=\"node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs|nsfs\",mountpoint!~\"/(run|var/lib/docker|var/lib/containerd|var/lib/kubelet)(/.*)?\"}) and (node_filesystem_readonly{job=\"node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs|nsfs\",mountpoint!~\"/(run|var/lib/docker|var/lib/containerd|var/lib/kubelet)(/.*)?\"} == 0) and (node_filesystem_files{job=\"node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs|nsfs\",mountpoint!~\"/(run|var/lib/docker|var/lib/containerd|var/lib/kubelet)(/.*)?\"} > 0)",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "range": false,
+                "refId": "A"
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "model": {
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "type": "threshold",
+                "refId": "B",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "lt",
+                      "params": [
+                        10
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "query": {
+                      "params": [
+                        "B"
+                      ]
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    },
+                    "type": "query"
+                  }
+                ]
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "for": "10m",
+          "annotations": {
+            "summary": "Inode {{ $labels.mountpoint }}: свободно {{ printf \"%.1f\" $values.A.Value }}%",
+            "description": "Проверьте df -i и каталоги с большим числом мелких файлов; свободные байты не гарантируют доступность inode.",
+            "__dashboardUid__": "movie-tracker-system",
+            "__panelId__": "13"
+          },
+          "labels": {
+            "severity": "warning"
+          },
+          "notification_settings": {
+            "receiver": "Movie Tracker Telegram"
+          }
+        },
+        {
+          "uid": "movie_tracker_system_inodes_critical",
+          "title": "Мало свободных inode — критично",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "editorMode": "code",
+                "expr": "(100 * node_filesystem_files_free{job=\"node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs|nsfs\",mountpoint!~\"/(run|var/lib/docker|var/lib/containerd|var/lib/kubelet)(/.*)?\"} / node_filesystem_files{job=\"node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs|nsfs\",mountpoint!~\"/(run|var/lib/docker|var/lib/containerd|var/lib/kubelet)(/.*)?\"}) and (node_filesystem_readonly{job=\"node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs|nsfs\",mountpoint!~\"/(run|var/lib/docker|var/lib/containerd|var/lib/kubelet)(/.*)?\"} == 0) and (node_filesystem_files{job=\"node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs|nsfs\",mountpoint!~\"/(run|var/lib/docker|var/lib/containerd|var/lib/kubelet)(/.*)?\"} > 0)",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "range": false,
+                "refId": "A"
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "model": {
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "type": "threshold",
+                "refId": "B",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "lt",
+                      "params": [
+                        3
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "query": {
+                      "params": [
+                        "B"
+                      ]
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    },
+                    "type": "query"
+                  }
+                ]
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "for": "5m",
+          "annotations": {
+            "summary": "Inode {{ $labels.mountpoint }}: свободно {{ printf \"%.1f\" $values.A.Value }}%",
+            "description": "Проверьте df -i и каталоги с большим числом мелких файлов; свободные байты не гарантируют доступность inode.",
+            "__dashboardUid__": "movie-tracker-system",
+            "__panelId__": "13"
+          },
+          "labels": {
+            "severity": "critical"
+          },
+          "notification_settings": {
+            "receiver": "Movie Tracker Telegram"
+          }
+        },
+        {
+          "uid": "movie_tracker_system_cpu_high",
+          "title": "Высокая загрузка CPU",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "editorMode": "code",
+                "expr": "100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{job=\"node\",mode=\"idle\"}[5m])))",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "range": false,
+                "refId": "A"
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "model": {
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "type": "threshold",
+                "refId": "B",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        90
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "query": {
+                      "params": [
+                        "B"
+                      ]
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    },
+                    "type": "query"
+                  }
+                ]
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "for": "10m",
+          "annotations": {
+            "summary": "CPU {{ $labels.instance }}: загрузка {{ printf \"%.1f\" $values.A.Value }}%",
+            "description": "Проверьте процессы, контейнеры и системный load; значение усредняется по ядрам за 5 минут.",
+            "__dashboardUid__": "movie-tracker-system",
+            "__panelId__": "7"
+          },
+          "labels": {
+            "severity": "warning"
+          },
+          "notification_settings": {
+            "receiver": "Movie Tracker Telegram"
+          }
+        },
+        {
+          "uid": "movie_tracker_system_iowait_high",
+          "title": "Длительное ожидание дискового I/O",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "editorMode": "code",
+                "expr": "100 * avg by (instance) (rate(node_cpu_seconds_total{job=\"node\",mode=\"iowait\"}[5m]))",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "range": false,
+                "refId": "A"
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "model": {
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "type": "threshold",
+                "refId": "B",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        20
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "query": {
+                      "params": [
+                        "B"
+                      ]
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    },
+                    "type": "query"
+                  }
+                ]
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "for": "10m",
+          "annotations": {
+            "summary": "I/O wait {{ $labels.instance }}: {{ printf \"%.1f\" $values.A.Value }}% CPU",
+            "description": "Проверьте дисковую нагрузку, свободное место и операции PostgreSQL, Prometheus и Loki.",
+            "__dashboardUid__": "movie-tracker-system",
+            "__panelId__": "7"
+          },
+          "labels": {
+            "severity": "warning"
+          },
+          "notification_settings": {
+            "receiver": "Movie Tracker Telegram"
+          }
+        },
+        {
+          "uid": "movie_tracker_system_load_high",
+          "title": "Высокая системная нагрузка",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "editorMode": "code",
+                "expr": "node_load15{job=\"node\"} / on (instance) count by (instance) (node_cpu_seconds_total{job=\"node\",mode=\"idle\"})",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "range": false,
+                "refId": "A"
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "model": {
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "type": "threshold",
+                "refId": "B",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        1.5
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "query": {
+                      "params": [
+                        "B"
+                      ]
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    },
+                    "type": "query"
+                  }
+                ]
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "for": "15m",
+          "annotations": {
+            "summary": "Load {{ $labels.instance }}: {{ printf \"%.2f\" $values.A.Value }} на ядро",
+            "description": "Средний load за 15 минут выше 1.5 на ядро; проверьте очередь процессов и ожидание дискового I/O.",
+            "__dashboardUid__": "movie-tracker-system",
+            "__panelId__": "8"
+          },
+          "labels": {
+            "severity": "warning"
+          },
+          "notification_settings": {
+            "receiver": "Movie Tracker Telegram"
+          }
+        },
+        {
+          "uid": "movie_tracker_system_oom",
+          "title": "Процесс завершён OOM killer",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "editorMode": "code",
+                "expr": "increase(node_vmstat_oom_kill{job=\"node\"}[5m])",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "range": false,
+                "refId": "A"
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "model": {
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "type": "threshold",
+                "refId": "B",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0.5
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "query": {
+                      "params": [
+                        "B"
+                      ]
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    },
+                    "type": "query"
+                  }
+                ]
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "for": "0s",
+          "annotations": {
+            "summary": "OOM killer сработал на {{ $labels.instance }}",
+            "description": "В последние 5 минут ядро завершило процесс из-за нехватки памяти. Проверьте журнал ядра и лимиты контейнеров.",
+            "__dashboardUid__": "movie-tracker-system",
+            "__panelId__": "16"
+          },
+          "labels": {
+            "severity": "critical"
+          },
+          "notification_settings": {
+            "receiver": "Movie Tracker Telegram"
+          }
+        }
+      ]
+    }
+  ]
+}

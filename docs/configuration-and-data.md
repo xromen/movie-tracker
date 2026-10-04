@@ -11,6 +11,7 @@
 | `POSTGRES_PORT` | `5432` | PostgreSQL host port |
 | `REDIS_PORT` | `6379` | Redis host port |
 | `GRAFANA_PORT` | `3001` | Grafana host port |
+| `GRAFANA_ROOT_URL` | `http://localhost:${GRAFANA_PORT:-3001}/` | полный внешний URL Grafana со слешем в конце; для production-домена — `https://grafana.movietracker.ru/` |
 | `PROMETHEUS_PORT` | `9091` | Prometheus host port |
 | `LOKI_PORT` | `3100` | Loki host port |
 | `TELEGRAM_ALERT_CHAT_ID` | пусто | ID Telegram-чата для оповещений Grafana; токен берётся из `TELEGRAM_BOT_TOKEN` |
@@ -71,10 +72,12 @@ DB pool фиксирован кодом: max 25, min 5, max lifetime 5 мину�
 Без профиля доступны `api`, `telegram-bot`, `worker`, `postgres`, `redis`. `frontend` имеет profile `frontend`. Prometheus/Grafana/Alertmanager/Loki/Promtail/exporters имеют profile `monitoring`.
 
 Alertmanager получает `TELEGRAM_API_BASE_URL` (по умолчанию `https://api.telegram.org`) и `TELEGRAM_ALERT_CHAT_ID` из Compose, а `TELEGRAM_BOT_TOKEN` через Compose secret. Адрес API должен быть доступен из контейнера Alertmanager; `localhost` внутри контейнера не указывает на хост. Alertmanager доступен только в сети Compose на порту `9093`.
+Каталог `monitoring/alertmanager` монтируется read-only в `/etc/alertmanager/templates`; Telegram использует компактный plain-text шаблон `telegram.tmpl` с ограничением числа событий и длины полей. Grafana получает внешний URL через `GF_SERVER_ROOT_URL`; после изменения `GRAFANA_ROOT_URL` пересоздайте её контейнер. Настройка системного nginx описана в [monitoring.md](monitoring.md).
 Для inline-конфигурации Alertmanager нужен Docker Compose не ниже 2.23.1.
 
 Профиль `monitoring` запускается самостоятельно: Prometheus опрашивает `frontend:3000` только если запущен frontend. Системный nginx отдаёт `stub_status` только на `127.0.0.1:8081`; exporter читает его через host network и по умолчанию слушает `:9113` на хосте, поэтому доступ к `9113` нужно ограничить firewall. Postgres-exporter подключается к `postgres:5432` с `DB_USER`/`DB_PASSWORD` и доступен только внутри сети Compose на `9187`. Redis-exporter подключается к `redis:6379` с `REDIS_PASSWORD` и доступен только внутри сети Compose на `9121`.
 Каталог `monitoring/prometheus` монтируется в контейнер Prometheus целиком, поэтому новая версия `prometheus.yml` видна после выкладки.
+Node-exporter использует host network и PID namespace хоста, а `/` монтируется read-only в `/host` с `rslave`, чтобы видеть системные mount points. HTTP listener привязан только к `host.docker.internal:9100`; `extra_hosts: host.docker.internal:host-gateway` разрешает это имя в IP Docker gateway, а не в `0.0.0.0`. Prometheus опрашивает тот же `host.docker.internal:9100`. Отдельный published port не нужен. При изменении сети/параметров node-exporter пересоздайте контейнер; Docker gateway должен быть доступен из сети Compose.
 
 | Volume | Данные |
 | --- | --- |
