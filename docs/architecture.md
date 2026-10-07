@@ -24,6 +24,8 @@
 
 Серверные запросы Next также идут через собственный proxy. Запрос с cookies всегда `no-store`; публичный server-side GET по умолчанию имеет revalidation 300 секунд, если вызывающий код не указал другое значение.
 
+Proxy записывает backend-метрики в `apps/web/src/lib/metrics/prometheus.ts`. Registry нормализует `route` по конечному списку шаблонов API и объединяет неизвестные пути в `<unmatched>`, чтобы конкретные media ID и произвольные URL не увеличивали число рядов Prometheus.
+
 ### Сохранение media в watch list
 
 `handler/api/watchlist.go` → `service/watchlist.go` → TMDB detail при необходимости → upsert `medias` → upsert `user_medias`. Внешний `tmdb_id` и `media_type` однозначно определяют media, но `user_medias.media_id` хранит внутренний `medias.id`.

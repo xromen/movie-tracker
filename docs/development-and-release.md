@@ -49,6 +49,13 @@ npm run lint
 npm run build
 ```
 
+После изменения web-метрик дополнительно выполните регрессионную проверку агрегации ID/неизвестных путей и histogram (Node.js 22.6+):
+
+```bash
+cd apps/web
+node --experimental-strip-types --test src/lib/metrics/prometheus.test.mjs
+```
+
 После изменений Go:
 
 ```bash

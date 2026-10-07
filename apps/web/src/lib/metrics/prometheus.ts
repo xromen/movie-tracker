@@ -1,5 +1,43 @@
 const durationBuckets = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10] as const;
 
+// Keep labels bounded, including requests to unknown paths through the catch-all proxy.
+const metricRoutes = [
+    "/health/live",
+    "/health/ready",
+    "/v1/auth/login",
+    "/v1/auth/logout",
+    "/v1/auth/register",
+    "/v1/auth/refresh",
+    "/v1/movie/search",
+    "/v1/movie/now-playing",
+    "/v1/movie/popular",
+    "/v1/movie/top-rated",
+    "/v1/movie/upcoming",
+    "/v1/movie/:id",
+    "/v1/movie/:id/recommendations",
+    "/v1/tv/search",
+    "/v1/tv/airing-today",
+    "/v1/tv/popular",
+    "/v1/tv/top-rated",
+    "/v1/tv/on-the-air",
+    "/v1/tv/:id",
+    "/v1/tv/:id/recommendations",
+    "/v1/tv/:id/season/:season_number",
+    "/v1/tv/:id/season/:season_number/watched",
+    "/v1/tv/:id/season/:season_number/episode/:episode_number/watched",
+    "/v1/company/:company_id",
+    "/v1/company/:company_id/movie",
+    "/v1/company/:company_id/tv",
+    "/v1/collections/:id",
+    "/v1/search/multi",
+    "/v1/watch-list",
+    "/v1/watch-list/status",
+    "/v1/telegram/binding-url",
+].map((template) => ({
+    template,
+    pattern: new RegExp(`^${template.replace(/:[a-z_]+/g, "[^/]+")}$`),
+}));
+
 type RequestKey = {
     method: string;
     route: string;
@@ -17,7 +55,8 @@ class WebMetrics {
     private readonly requests = new Map<string, RequestMetrics>();
 
     observe(method: string, route: string, status: number, durationSeconds: number) {
-        const key = createKey({method, route, status});
+        const metricRoute = metricRoutes.find(({pattern}) => pattern.test(route))?.template ?? "<unmatched>";
+        const key = createKey({method, route: metricRoute, status});
         const item = this.requests.get(key) ?? {
             count: 0,
             sum: 0,

@@ -166,6 +166,22 @@ API пишет JSON-логи одновременно в stdout и в файл `
 
 API-метрики группируют неизвестные маршруты в `route="<unmatched>"`, чтобы произвольные URL не создавали неограниченное число рядов Prometheus.
 
+Web-метрики `movie_tracker_web_backend_requests_total` и `movie_tracker_web_backend_request_duration_seconds` также используют ограниченный набор `route`: шаблоны API из `apps/web/src/lib/metrics/prometheus.ts`, например `/v1/movie/:id` и `/v1/tv/:id/season/:season_number`. Конкретные ID не попадают в labels; неизвестные пути объединяются в `<unmatched>`. Query string proxy не передаёт в метрики. При добавлении API endpoint обновляйте список шаблонов; статические маршруты должны стоять перед динамическими. Имена метрик, histogram buckets, method/status и запросы существующего web-дашборда сохраняются.
+
+### Высокое потребление памяти Prometheus
+
+Проверьте `docker stats --no-stream movie-tracker-prometheus` и `curl -fsS http://127.0.0.1:9091/api/v1/status/tsdb` (замените порт своим `PROMETHEUS_PORT`). В TSDB смотрите `headStats.numSeries`, `seriesCountByMetricName` и `labelValueCountByLabelName`. Большое число разных `route` у web-метрик означает сбор конкретных URL вместо шаблонов: каждый набор method/route/status создаёт 15 рядов (counter, 12 histogram buckets, sum и count). Web registry сохраняет их до перезапуска процесса и повторно отдаёт при каждом scrape, даже если новых запросов по URL нет.
+
+После исправления пересоберите frontend на сервере из обновлённого checkout:
+
+```bash
+docker compose --profile frontend --profile monitoring up -d --no-deps --build frontend
+```
+
+Новый web-процесс начинает registry с шаблонов маршрутов. Старые ряды перестают поступать в Prometheus, но память освободится постепенно после compaction текущего блока и очистки неактивных рядов; это занимает несколько часов. Перезапуск только Prometheus не устраняет причину и повторно загружает текущие данные из WAL. Проверяйте TSDB и память после нескольких циклов compaction. Старую историю можно продолжать читать до истечения retention; широкие запросы по ней всё ещё могут потреблять много ресурсов. Не удаляйте volume или WAL для ускорения очистки.
+
+Retention по умолчанию — 15 дней: уменьшение до недели или двух дней прежде всего экономит диск, а не исправляет рост числа активных рядов. Сначала исправьте labels, затем подбирайте интервал сбора и лимит памяти по фактическому потреблению. Уменьшение лимита контейнера ниже рабочего объёма может вызвать OOM и перезапуски. Устройство head/WAL и retention описано в [документации Prometheus](https://prometheus.io/docs/prometheus/latest/storage/).
+
 Для nginx, установленного на сервере через systemctl, нужно включить `stub_status` на хосте. Подключите файл `deploy/nginx/monitoring.conf` внутри контекста `http`, затем проверьте и перезагрузите nginx:
 
 ```bash
