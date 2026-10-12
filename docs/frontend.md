@@ -30,6 +30,12 @@ public/           favicon, icons, robots.txt, Inter fonts
 
 `/` отображает movie catalog. Допустимые фильтры определяются в `MovieCatalog.tsx` и `TvCatalog.tsx` и преобразуются в API paths через `lib/api/media.ts`.
 
+## Постеры карточек
+
+`components/media-card/MediaCard.tsx` использует native lazy loading и асинхронное декодирование изображений. Первые две карточки каталога и личного списка загружаются сразу с высоким приоритетом; остальные карточки, включая карусели, — по мере приближения к видимой области.
+
+Для TMDB-совместимых URL с `/t/p/w500/` helper `components/media-card/poster.ts` формирует `srcset` для `w185`, `w342`, `w500`, сохраняя origin, префикс image proxy и query. `sizes="195px"` соответствует максимальной ширине карточки и позволяет браузеру выбрать вариант с учётом плотности экрана. Исходный `src` остаётся fallback; другие форматы URL не переписываются. Image proxy должен поддерживать эти размеры. Размеры 500×750 и существующий CSS `aspect-ratio: 2/3` резервируют место под постер.
+
 ## API client и caching
 
 `fetchApi` всегда строит URL через `/api/backend`. В браузере используется относительный URL. На сервере origin берётся из `X-Forwarded-Host`/`Host` и `X-Forwarded-Proto`, fallback — `NEXT_PUBLIC_APP_URL`.

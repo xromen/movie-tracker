@@ -376,8 +376,8 @@ const WatchlistClient = () => {
 
             {!isError && !isLoading && items.length > 0 && (
                 <div className={styles.grid}>
-                    {items.map((media) => (
-                        <MediaCard key={`${media.type}-${media.id}`} {...media} type={media.type}/>
+                    {items.map((media, index) => (
+                        <MediaCard key={`${media.type}-${media.id}`} {...media} type={media.type} priority={index < 2}/>
                     ))}
                 </div>
             )}

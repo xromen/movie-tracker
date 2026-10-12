@@ -9,8 +9,8 @@ interface MediaCatalogProps {
 const MediaCatalog = ({ medias }: MediaCatalogProps) => {
     return (
         <div className={styles.grid}>
-            {medias.map((media) => (
-                <MediaCard key={media.id} {...media} />
+            {medias.map((media, index) => (
+                <MediaCard key={media.id} {...media} priority={index < 2} />
             ))}
         </div>
     )

@@ -17,6 +17,7 @@ import ContentLoader from "react-content-loader"
 import { removeWatchStatus, setWatchStatus } from "@/lib/api/media"
 import { getTypeLabel, MediaType, WatchStatus } from "@/lib/api/types"
 import styles from "./MediaCard.module.css"
+import { getPosterSrcSet } from "./poster"
 
 interface MediaCardProps {
     id?: number
@@ -30,6 +31,7 @@ interface MediaCardProps {
     watchStatus?: WatchStatus
     type?: MediaType
     isLoading?: boolean
+    priority?: boolean
 }
 
 const POPOVER_WIDTH = 340
@@ -97,6 +99,7 @@ const MediaCard = ({
     watchStatus,
     type,
     isLoading,
+    priority = false,
 }: MediaCardProps) => {
     const popoverId = useId()
     const infoButtonRef = useRef<HTMLButtonElement>(null)
@@ -287,7 +290,18 @@ const MediaCard = ({
             <Link href={`/details/${type}/${id}`} className={styles.cardLink}>
                 <div className={styles.poster}>
                     {posterPath ? (
-                        <img src={posterPath} alt={title} className={styles.posterImage} />
+                        <img
+                            src={posterPath}
+                            srcSet={getPosterSrcSet(posterPath)}
+                            sizes="195px"
+                            width={500}
+                            height={750}
+                            loading={priority ? "eager" : "lazy"}
+                            fetchPriority={priority ? "high" : "auto"}
+                            decoding="async"
+                            alt={title}
+                            className={styles.posterImage}
+                        />
                     ) : (
                         <div className={styles.posterPlaceholder}>Нет постера</div>
                     )}
