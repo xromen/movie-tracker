@@ -32,7 +32,7 @@ Proxy записывает backend-метрики в `apps/web/src/lib/metrics/p
 
 ### Фоновая синхронизация
 
-`service/worker.go` запускается сразу и затем раз в час. PostgreSQL advisory lock `tmdb-schedule-sync` не даёт нескольким экземплярам выполнять цикл одновременно. Пакеты обрабатываются по 100 записей:
+`service/worker.go` запускается сразу и затем раз в 10 минут. PostgreSQL advisory lock `tmdb-schedule-sync` не даёт нескольким экземплярам выполнять цикл одновременно. Пакеты обрабатываются по 100 записей:
 
 - коллекции обновляются раз в 7 дней;
 - актуальные фильмы и сериалы обычно обновляются раз в сутки;
@@ -60,6 +60,8 @@ migrations          версия схемы данных
 ```
 
 Новую бизнес-логику помещайте в service, SQL — в repository, преобразование HTTP DTO — в handler. Wiring и route registration остаются в `cmd/api/main.go`.
+
+TMDB-клиент создаёт один общий limiter на весь срок жизни клиента (`platform/tmdb/client.go`). Request-specific transport из `platform/tmdb/transport.go` объединяет контекст вызывающего кода с HTTP deadline, выполняет до 3 попыток GET без тела и перед каждой попыткой ожидает токен лимитера. Параллельные запросы и ретраи делят лимит; API и schedule worker имеют независимые клиенты и лимиты в своих процессах. Детали повторов описаны в `api.md`, параметры — в `configuration-and-data.md`.
 
 ## Карта изменений
 

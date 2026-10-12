@@ -305,7 +305,7 @@ func (c *client) GetMovieDetails(ctx context.Context, tmdbId int64) (*domain.Mov
 		ProductionCompanies: productionCompanies,
 		Popularity:          result.Popularity,
 		Status:              result.Status,
-		Videos:              toDomainViedos(result.Videos),
+		Videos:              toDomainVideos(result.Videos),
 		VoteAverage:         result.VoteAverage,
 		VoteCount:           result.VoteCount,
 		Runtime:             result.Runtime,

@@ -326,7 +326,7 @@ func (c *client) GetTVShowDetails(ctx context.Context, tmdbId int64) (*domain.TV
 		OriginalTitle:          result.OriginalName,
 		Popularity:             result.Popularity,
 		Status:                 result.Status,
-		Videos:                 toDomainViedos(result.Videos),
+		Videos:                 toDomainVideos(result.Videos),
 		VoteAverage:            result.VoteAverage,
 		VoteCount:              result.VoteCount,
 		NumberOfSeasons:        result.NumberOfSeasons,

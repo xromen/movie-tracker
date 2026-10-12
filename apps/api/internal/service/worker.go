@@ -18,7 +18,7 @@ import (
 const (
 	batchSize            = 100
 	retryDelay           = time.Hour
-	pollInterval         = time.Hour
+	pollInterval         = 10 * time.Minute
 	telegramMessageLimit = 3500
 )
 

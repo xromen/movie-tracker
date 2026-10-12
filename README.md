@@ -64,6 +64,8 @@ TMDB_BASE_URL=https://api.themoviedb.org/3
 TMDB_IMAGES_BASE_URL=https://api.themoviedb.org
 TMDB_BEARER_TOKEN=your_tmdb_v4_bearer_token
 TMDB_TIMEOUT=10s
+TMDB_RPM=240
+TMDB_BURST=40
 
 JWT_SECRET=change-me-in-production
 
@@ -74,6 +76,8 @@ REDIS_DISABLED=false
 ```
 
 В Docker Compose frontend ходит к backend по внутреннему адресу `http://api:${PORT:-8080}/api`. При локальном запуске web вне Docker значение по умолчанию для `MOVIE_TRACKER_API_URL` - `http://localhost:8080/api`.
+
+Запросы к TMDB автоматически повторяются при временных сетевых сбоях и HTTP `429`, `500`, `502`, `503`, `504`: до 3 попыток в пределах `TMDB_TIMEOUT`, с учётом `Retry-After`. `TMDB_RPM` задаёт запросы в минуту, `TMDB_BURST` — допустимый начальный всплеск; повторные попытки также расходуют лимит. Лимит общий для одного TMDB-клиента в процессе. Если ранее в `.env` был явно задан `TMDB_RPM`, умножьте прежнее значение на 60, чтобы сохранить скорость: раньше оно ошибочно трактовалось как запросы в секунду.
 
 ## Локальная разработка web
 

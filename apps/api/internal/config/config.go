@@ -115,14 +115,20 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("invalid TMDB_TIMEOUT")
 	}
 
-	tmdbRPM, err := strconv.Atoi(getEnv("TMDB_RPM", "4"))
+	tmdbRPM, err := strconv.Atoi(getEnv("TMDB_RPM", "240"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid TMDB_RPM: %w", err)
+	}
+	if tmdbRPM <= 0 {
+		return nil, fmt.Errorf("TMDB_RPM must be positive")
 	}
 
 	tmdbBurst, err := strconv.Atoi(getEnv("TMDB_BURST", "40"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid TMDB_BURST: %w", err)
+	}
+	if tmdbBurst <= 0 {
+		return nil, fmt.Errorf("TMDB_BURST must be positive")
 	}
 
 	return &Config{

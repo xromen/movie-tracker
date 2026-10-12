@@ -77,11 +77,14 @@ type client struct {
 	imagesBaseURL string
 	timeout       time.Duration
 	transport     http.RoundTripper
-	RPM           int
-	Burst         int
+	limiter       *rate.Limiter
 }
 
 func NewClient(cfg Config) (Client, error) {
+	if cfg.Timeout <= 0 || cfg.RPM <= 0 || cfg.Burst <= 0 {
+		return nil, fmt.Errorf("TMDB timeout, RPM and burst must be positive")
+	}
+
 	c, err := gotmdb.InitV4(cfg.BearerToken)
 	if err != nil {
 		return nil, fmt.Errorf("init tmdb client: %w", err)
@@ -94,8 +97,7 @@ func NewClient(cfg Config) (Client, error) {
 		imagesBaseURL: cfg.ImagesBaseURL,
 		timeout:       cfg.Timeout,
 		transport:     http.DefaultTransport,
-		RPM:           cfg.RPM,
-		Burst:         cfg.Burst,
+		limiter:       rate.NewLimiter(rate.Limit(float64(cfg.RPM)/60), cfg.Burst),
 	}, nil
 }
 
@@ -105,59 +107,17 @@ func (c *client) requestClient(ctx context.Context) (*gotmdb.Client, error) {
 		return nil, fmt.Errorf("init tmdb request client: %w", err)
 	}
 
-	contextTransport := contextTransport{
-		ctx:  ctx,
-		base: c.transport,
-	}
-
-	limiter := rate.NewLimiter(rate.Limit(c.RPM), c.Burst)
-
-	rateLimitedTransport := &rateLimitedTransport{
-		base:    contextTransport,
-		limiter: limiter,
-		ctx:     ctx,
-	}
-
 	tmdbClient.SetClientConfig(http.Client{
-		Timeout:   c.timeout,
-		Transport: rateLimitedTransport,
+		Timeout: c.timeout,
+		Transport: contextTransport{
+			ctx: ctx,
+			base: retryTransport{
+				base: rateLimitedTransport{base: c.transport, limiter: c.limiter},
+			},
+		},
 	})
 
 	return tmdbClient, nil
-}
-
-type contextTransport struct {
-	ctx  context.Context
-	base http.RoundTripper
-}
-
-type rateLimitedTransport struct {
-	base    http.RoundTripper
-	limiter *rate.Limiter
-	ctx     context.Context
-}
-
-func (t contextTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	ctx := t.ctx
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
-	base := t.base
-	if base == nil {
-		base = http.DefaultTransport
-	}
-
-	return base.RoundTrip(req.Clone(ctx))
-}
-
-func (t *rateLimitedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	err := t.limiter.Wait(t.ctx)
-	if err != nil {
-		return nil, fmt.Errorf("rate limit wait: %w", err)
-	}
-
-	return t.base.RoundTrip(req)
 }
 
 func (c *client) getPosterPath(relative string) string {
@@ -186,7 +146,7 @@ func toDomainGenres(genres []gotmdb.Genre) []domain.Genre {
 	return domainGenres
 }
 
-func toDomainViedos(result *gotmdb.VideoResults) []domain.Video {
+func toDomainVideos(result *gotmdb.VideoResults) []domain.Video {
 	var videos = make([]domain.Video, 0, len(result.Results))
 	for _, result := range result.Results {
 		videos = append(videos, domain.Video{

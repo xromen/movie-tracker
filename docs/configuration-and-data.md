@@ -60,12 +60,16 @@ DB pool фиксирован кодом: max 25, min 5, max lifetime 5 мину�
 | `TMDB_BASE_URL` | `https://api.themoviedb.org/3` | TMDB API |
 | `TMDB_IMAGES_BASE_URL` | `https://api.themoviedb.org` | prefix изображений в API config |
 | `TMDB_BEARER_TOKEN` | пусто | обязательный TMDB v4 token |
-| `TMDB_TIMEOUT` | `10s` | HTTP timeout |
-| `TMDB_RPM` | `4` | rate limiter events per second в текущем config name |
+| `TMDB_TIMEOUT` | `10s` | общий HTTP timeout, включая ретраи, паузы, limiter и чтение ответа |
+| `TMDB_RPM` | `240` | запросов в минуту на один TMDB-клиент, включая ретраи |
 | `TMDB_BURST` | `40` | burst limit |
 | `TELEGRAM_BOT_TOKEN` | пусто | обязателен для `telegram-bot` |
 | `TELEGRAM_BOT_USERNAME` | пусто | используется в binding deep link |
 | `TELEGRAM_API_BASE_URL` | `https://api.telegram.org` | Telegram API endpoint |
+
+`TMDB_TIMEOUT`, `TMDB_RPM` и `TMDB_BURST` должны быть положительными. Limiter общий для всех запросов одного клиента, но независимый между процессами API и schedule worker. `TMDB_RPM` и `TMDB_BURST` передаются Compose через существующий `env_file`.
+
+Ранее `TMDB_RPM` ошибочно использовался как запросы в секунду и limiter пересоздавался при каждом вызове. Default изменён с `4` на `240`, сохранив номинальную скорость 4 запроса/с. Для явно заданного прежнего значения в `.env` умножьте его на 60, чтобы сохранить номинальную скорость; реальные параллельные запросы теперь соблюдают общий лимит.
 
 ## Compose services, profiles и volumes
 

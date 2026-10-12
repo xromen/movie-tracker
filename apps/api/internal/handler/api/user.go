@@ -169,7 +169,7 @@ func handleServiceError(c *gin.Context, err error, logger *slog.Logger) {
 		c.JSON(http.StatusBadRequest, errorResponse(err.Error()))
 	default:
 		{
-			logger.Error("internal server error", "err", err)
+			_ = c.Error(err)
 			c.JSON(http.StatusInternalServerError, errorResponse("internal server error"))
 		}
 	}

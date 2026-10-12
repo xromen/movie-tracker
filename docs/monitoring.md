@@ -164,6 +164,8 @@ Exporter и Prometheus запускаются независимо от дост
 
 API пишет JSON-логи одновременно в stdout и в файл `/var/log/movie-tracker/api.log` внутри контейнера. Файл лежит в volume `api_logs`, Promtail читает его и отправляет в Loki с label `job="movie-tracker-api"`.
 
+Неожиданные ошибки service в `handleServiceError` регистрируются через `c.Error(err)` и попадают в поле `errors` общей записи `request` от `StructuredLogger` вместе с `trace_id`, маршрутом и HTTP-статусом. Отдельная запись `internal server error` в этом обработчике больше не создаётся; публичный ответ остаётся `500` с сообщением `internal server error`.
+
 API-метрики группируют неизвестные маршруты в `route="<unmatched>"`, чтобы произвольные URL не создавали неограниченное число рядов Prometheus.
 
 Web-метрики `movie_tracker_web_backend_requests_total` и `movie_tracker_web_backend_request_duration_seconds` также используют ограниченный набор `route`: шаблоны API из `apps/web/src/lib/metrics/prometheus.ts`, например `/v1/movie/:id` и `/v1/tv/:id/season/:season_number`. Конкретные ID не попадают в labels; неизвестные пути объединяются в `<unmatched>`. Query string proxy не передаёт в метрики. При добавлении API endpoint обновляйте список шаблонов; статические маршруты должны стоять перед динамическими. Имена метрик, histogram buckets, method/status и запросы существующего web-дашборда сохраняются.
