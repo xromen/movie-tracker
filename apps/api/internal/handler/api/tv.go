@@ -127,8 +127,8 @@ func (h *TVShowHandler) Search(c *gin.Context) {
 
 func (h *TVShowHandler) GetAiringToday(c *gin.Context) {
 	var userID *int64
-	if id, exists := c.Get(ContextUserID); exists {
-		if v, ok := id.(int64); ok {
+	if rawUserID, exists := c.Get(ContextUserID); exists {
+		if v, ok := rawUserID.(int64); ok {
 			userID = &v
 		}
 	}
@@ -145,8 +145,8 @@ func (h *TVShowHandler) GetAiringToday(c *gin.Context) {
 
 func (h *TVShowHandler) GetPopular(c *gin.Context) {
 	var userID *int64
-	if id, exists := c.Get(ContextUserID); exists {
-		if v, ok := id.(int64); ok {
+	if rawUserID, exists := c.Get(ContextUserID); exists {
+		if v, ok := rawUserID.(int64); ok {
 			userID = &v
 		}
 	}
@@ -163,8 +163,8 @@ func (h *TVShowHandler) GetPopular(c *gin.Context) {
 
 func (h *TVShowHandler) GetTopRated(c *gin.Context) {
 	var userID *int64
-	if id, exists := c.Get(ContextUserID); exists {
-		if v, ok := id.(int64); ok {
+	if rawUserID, exists := c.Get(ContextUserID); exists {
+		if v, ok := rawUserID.(int64); ok {
 			userID = &v
 		}
 	}
@@ -181,8 +181,8 @@ func (h *TVShowHandler) GetTopRated(c *gin.Context) {
 
 func (h *TVShowHandler) GetOnTheAir(c *gin.Context) {
 	var userID *int64
-	if id, exists := c.Get(ContextUserID); exists {
-		if v, ok := id.(int64); ok {
+	if rawUserID, exists := c.Get(ContextUserID); exists {
+		if v, ok := rawUserID.(int64); ok {
 			userID = &v
 		}
 	}
@@ -199,15 +199,15 @@ func (h *TVShowHandler) GetOnTheAir(c *gin.Context) {
 
 func (h *TVShowHandler) ByCompanyID(c *gin.Context) {
 	var userID *int64
-	if id, exists := c.Get(ContextUserID); exists {
-		if v, ok := id.(int64); ok {
+	if rawUserID, exists := c.Get(ContextUserID); exists {
+		if v, ok := rawUserID.(int64); ok {
 			userID = &v
 		}
 	}
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	companyID, _ := strconv.ParseInt(c.Param("company_id"), 10, 64)
+	companyTMDBID, _ := strconv.ParseInt(c.Param("company_id"), 10, 64)
 
-	result, err := h.tvShowService.GetByCompanyID(c.Request.Context(), userID, companyID, page)
+	result, err := h.tvShowService.GetByCompanyID(c.Request.Context(), userID, companyTMDBID, page)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
@@ -218,14 +218,14 @@ func (h *TVShowHandler) ByCompanyID(c *gin.Context) {
 
 func (h *TVShowHandler) GetTVShowDetail(c *gin.Context) {
 	var userID *int64
-	if id, exists := c.Get(ContextUserID); exists {
-		if v, ok := id.(int64); ok {
+	if rawUserID, exists := c.Get(ContextUserID); exists {
+		if v, ok := rawUserID.(int64); ok {
 			userID = &v
 		}
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	tmdbID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 
-	result, err := h.tvShowService.GetDetails(c.Request.Context(), userID, id)
+	result, err := h.tvShowService.GetDetails(c.Request.Context(), userID, tmdbID)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
@@ -236,15 +236,15 @@ func (h *TVShowHandler) GetTVShowDetail(c *gin.Context) {
 
 func (h *TVShowHandler) GetRecommendations(c *gin.Context) {
 	var userID *int64
-	if id, exists := c.Get(ContextUserID); exists {
-		if v, ok := id.(int64); ok {
+	if rawUserID, exists := c.Get(ContextUserID); exists {
+		if v, ok := rawUserID.(int64); ok {
 			userID = &v
 		}
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	tmdbID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 
-	result, err := h.tvShowService.GetRecommendations(c.Request.Context(), userID, id, page)
+	result, err := h.tvShowService.GetRecommendations(c.Request.Context(), userID, tmdbID, page)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
@@ -255,16 +255,16 @@ func (h *TVShowHandler) GetRecommendations(c *gin.Context) {
 
 func (h *TVShowHandler) GetSeasonEpisodes(c *gin.Context) {
 	var userID *int64
-	if id, exists := c.Get(ContextUserID); exists {
-		if v, ok := id.(int64); ok {
+	if rawUserID, exists := c.Get(ContextUserID); exists {
+		if v, ok := rawUserID.(int64); ok {
 			userID = &v
 		}
 	}
-	tvShowID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	tvShowTMDBID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	seasonNumber, _ := strconv.Atoi(c.Param("season_number"))
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 
-	result, err := h.tvShowService.GetSeasonEpisodes(c.Request.Context(), userID, tvShowID, seasonNumber, page)
+	result, err := h.tvShowService.GetSeasonEpisodes(c.Request.Context(), userID, tvShowTMDBID, seasonNumber, page)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
@@ -290,7 +290,7 @@ func (h *TVShowHandler) UnmarkSeasonWatched(c *gin.Context) {
 }
 
 func (h *TVShowHandler) setSeasonWatched(c *gin.Context, watched bool) {
-	tvShowID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	tvShowTMDBID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	seasonNumber, _ := strconv.Atoi(c.Param("season_number"))
 
 	userID, _ := c.Get(ContextUserID)
@@ -300,14 +300,14 @@ func (h *TVShowHandler) setSeasonWatched(c *gin.Context, watched bool) {
 		err = h.tvShowService.MarkSeasonWatched(
 			c.Request.Context(),
 			userID.(int64),
-			tvShowID,
+			tvShowTMDBID,
 			seasonNumber,
 		)
 	} else {
 		err = h.tvShowService.UnmarkSeasonWatched(
 			c.Request.Context(),
 			userID.(int64),
-			tvShowID,
+			tvShowTMDBID,
 			seasonNumber,
 		)
 	}
@@ -321,7 +321,7 @@ func (h *TVShowHandler) setSeasonWatched(c *gin.Context, watched bool) {
 }
 
 func (h *TVShowHandler) setEpisodeWatched(c *gin.Context, watched bool) {
-	tvShowID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	tvShowTMDBID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	seasonNumber, _ := strconv.Atoi(c.Param("season_number"))
 	episodeNumber, _ := strconv.Atoi(c.Param("episode_number"))
 
@@ -330,7 +330,7 @@ func (h *TVShowHandler) setEpisodeWatched(c *gin.Context, watched bool) {
 	result, err := h.tvShowService.SetEpisodeWatched(
 		c.Request.Context(),
 		userID.(int64),
-		tvShowID,
+		tvShowTMDBID,
 		seasonNumber,
 		episodeNumber,
 		watched,
@@ -357,7 +357,7 @@ func toPaginatedTVShows(result *service.TVShowPageOutput) tvShowSearchResponse {
 
 func toTVShowResponse(tvShow domain.Media) tvShowResponse {
 	return tvShowResponse{
-		ID:          tvShow.ID,
+		ID:          tvShow.TMDBID,
 		Title:       tvShow.Title,
 		Overview:    tvShow.Overview,
 		PosterPath:  tvShow.PosterPath,
@@ -370,7 +370,7 @@ func toTVShowResponse(tvShow domain.Media) tvShowResponse {
 
 func toTVShowDetailResponse(tvShow *domain.TVShowDetail) tvShowDetailResponse {
 	return tvShowDetailResponse{
-		ID:                     tvShow.ID,
+		ID:                     tvShow.TMDBID,
 		Title:                  tvShow.Title,
 		Overview:               tvShow.Overview,
 		ReleaseDate:            tvShow.ReleaseDate,
@@ -396,7 +396,7 @@ func toSeasonsResponse(seasons []domain.Season) []tvShowSeasonResponse {
 	result := make([]tvShowSeasonResponse, 0, len(seasons))
 	for _, season := range seasons {
 		result = append(result, tvShowSeasonResponse{
-			ID:           season.ID,
+			ID:           season.TMDBID,
 			ReleaseDate:  season.ReleaseDate,
 			EpisodeCount: season.EpisodeCount,
 			Title:        season.Title,
@@ -415,14 +415,14 @@ func toEpisodesResponse(result *service.EpisodePageOutput) *pagedTVShowEpisodesR
 	episodes := make([]tvShowEpisodeResponse, 0, len(result.Episodes))
 	for _, episode := range result.Episodes {
 		episodes = append(episodes, tvShowEpisodeResponse{
-			ID:            episode.ID,
+			ID:            episode.TMDBID,
 			ReleaseDate:   episode.AirDate,
 			EpisodeNumber: episode.EpisodeNumber,
 			Title:         episode.Title,
 			Overview:      episode.Overview,
 			Runtime:       episode.Runtime,
 			SeasonNumber:  episode.SeasonNumber,
-			TVShowId:      episode.TVShowId,
+			TVShowId:      episode.TVShowTMDBID,
 			PosterPath:    episode.StillPath,
 			VoteAverage:   episode.VoteAverage,
 			VoteCount:     episode.VoteCount,

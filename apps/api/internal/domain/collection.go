@@ -1,7 +1,7 @@
 package domain
 
 type Collection struct {
-	ID         int64
+	TMDBID     int64 `json:"ID"`
 	Name       string
 	Overview   string
 	PosterPath string
@@ -9,7 +9,7 @@ type Collection struct {
 }
 
 type CollectionPart struct {
-	ID          int64
+	TMDBID      int64 `json:"ID"`
 	Title       string
 	Overview    string
 	PosterPath  string

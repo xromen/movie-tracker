@@ -34,7 +34,7 @@ type workerRepository interface {
 		releases []domain.MovieRelease,
 	) error
 
-	UpdateMovieCollectionID(ctx context.Context, mediaID int64, collectionID *int64) error
+	UpdateMovieCollectionID(ctx context.Context, mediaID int64, collectionTMDBID *int64) error
 
 	ReplaceSeasonEpisodes(
 		ctx context.Context,
@@ -48,8 +48,8 @@ type workerRepository interface {
 	MarkMediaSuccess(ctx context.Context, mediaID int64, nextSync time.Time) error
 	MarkMediaFailure(ctx context.Context, mediaID int64, nextRetry time.Time, message string) error
 
-	MarkCollectionSuccess(ctx context.Context, collectionID int64, nextSync time.Time) error
-	MarkCollectionFailure(ctx context.Context, collectionID int64, nextRetry time.Time, message string) error
+	MarkCollectionSuccess(ctx context.Context, collectionTMDBID int64, nextSync time.Time) error
+	MarkCollectionFailure(ctx context.Context, collectionTMDBID int64, nextRetry time.Time, message string) error
 
 	GetMoviesForReport(ctx context.Context, userID int64, from, to time.Time) ([]domain.ReportMovie, error)
 	GetTvEpisodesForReport(ctx context.Context, userID int64, from, to time.Time) ([]domain.ReportTvEpisode, error)
@@ -118,11 +118,11 @@ func (w *Worker) runOnce(ctx context.Context) {
 			break
 		}
 
-		for _, collectionID := range items {
-			if err := w.syncCollection(ctx, collectionID); err != nil {
+		for _, collectionTMDBID := range items {
+			if err := w.syncCollection(ctx, collectionTMDBID); err != nil {
 				_ = w.repo.MarkCollectionFailure(
 					ctx,
-					collectionID,
+					collectionTMDBID,
 					time.Now().Add(retryDelay),
 					err.Error(),
 				)
@@ -195,8 +195,8 @@ func (w *Worker) syncMedia(ctx context.Context, media domain.TrackedMedia) error
 	}
 }
 
-func (w *Worker) syncCollection(ctx context.Context, id int64) error {
-	collection, err := w.tmdb.GetCollectionDetails(ctx, id)
+func (w *Worker) syncCollection(ctx context.Context, collectionTMDBID int64) error {
+	collection, err := w.tmdb.GetCollectionDetails(ctx, collectionTMDBID)
 	if err != nil {
 		return fmt.Errorf("get collection details: %w", err)
 	}
@@ -207,7 +207,7 @@ func (w *Worker) syncCollection(ctx context.Context, id int64) error {
 
 	nextSync := time.Now().Add(7 * 24 * time.Hour)
 
-	return w.repo.MarkCollectionSuccess(ctx, id, nextSync)
+	return w.repo.MarkCollectionSuccess(ctx, collectionTMDBID, nextSync)
 }
 
 func (w *Worker) syncMovie(ctx context.Context, media domain.TrackedMedia) error {
@@ -230,15 +230,19 @@ func (w *Worker) syncMovie(ctx context.Context, media domain.TrackedMedia) error
 		return fmt.Errorf("sync movie get movie details: %w", err)
 	}
 
-	if details.CollectionID != media.CollectionID {
-		if details.CollectionID == nil {
+	collectionChanged := (details.CollectionTMDBID == nil) != (media.CollectionTMDBID == nil)
+	if details.CollectionTMDBID != nil && media.CollectionTMDBID != nil {
+		collectionChanged = *details.CollectionTMDBID != *media.CollectionTMDBID
+	}
+	if collectionChanged {
+		if details.CollectionTMDBID == nil {
 			err := w.repo.UpdateMovieCollectionID(ctx, media.ID, nil)
 
 			if err != nil {
 				return fmt.Errorf("sync movie update collection id: %w", err)
 			}
 		} else {
-			err := w.syncCollection(ctx, *details.CollectionID)
+			err := w.syncCollection(ctx, *details.CollectionTMDBID)
 
 			if err != nil {
 				return fmt.Errorf("sync movie sync collection: %w", err)

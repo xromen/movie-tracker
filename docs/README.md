@@ -18,6 +18,7 @@
 
 - Браузер обращается к Go API через Next route handler `/api/backend/[...path]`.
 - Публичный префикс Go API — `/api`; бизнес-методы находятся под `/api/v1`.
+- В публичном поле `id` медиа всегда передаётся TMDB ID; внутренний `medias.id` остаётся в PostgreSQL/repository. В доменных моделях внешний идентификатор называется `TMDBID`.
 - PostgreSQL — источник постоянных данных; Redis можно отключить через `REDIS_DISABLED=true`.
 - SQL-миграции применяет только процесс API при старте и только из `file:///migrations`.
 - Access token и refresh token передаются в HTTP-only cookies; frontend выполняет refresh до запроса, если access cookie отсутствует.

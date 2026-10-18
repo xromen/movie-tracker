@@ -1,16 +1,17 @@
 package domain
 
 type Media struct {
-	ID           int64
-	Title        string
-	Overview     string
-	ReleaseDate  string
-	PosterPath   string
-	VoteAverage  float32
-	VoteCount    int64
-	WatchStatus  WatchStatus
-	Type         MediaType
-	CollectionID *int64
+	ID               int64 `json:"-"`  // Внутренний medias.id; не используется в HTTP DTO и TMDB-запросах.
+	TMDBID           int64 `json:"ID"` // Сохраняет совместимость с JSON-кэшем TMDB.
+	Title            string
+	Overview         string
+	ReleaseDate      string
+	PosterPath       string
+	VoteAverage      float32
+	VoteCount        int64
+	WatchStatus      WatchStatus
+	Type             MediaType
+	CollectionTMDBID *int64 `json:"CollectionID"`
 }
 
 type UserMedia struct {
@@ -64,8 +65,8 @@ func (s WatchStatus) IsValid() bool {
 }
 
 type TrackedMedia struct {
-	ID           int64
-	TMDBID       int64
-	Type         MediaType
-	CollectionID *int64
+	ID               int64
+	TMDBID           int64
+	Type             MediaType
+	CollectionTMDBID *int64
 }

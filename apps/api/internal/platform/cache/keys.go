@@ -18,8 +18,8 @@ func MovieTopRatedKey(page int) string {
 func MovieUpcomingKey(page int) string {
 	return fmt.Sprintf("movie:upcoming:%d", page)
 }
-func MovieByCompanyIDKey(companyID int64, page int) string {
-	return fmt.Sprintf("movie:by_company_id:%d:%d", companyID, page)
+func MovieByCompanyIDKey(companyTMDBID int64, page int) string {
+	return fmt.Sprintf("movie:by_company_id:%d:%d", companyTMDBID, page)
 }
 func MovieDetailKey(tmdbID int64) string {
 	return fmt.Sprintf("movie:detail:tmdb:%d", tmdbID)
@@ -52,8 +52,8 @@ func TVShowTopRatedKey(page int) string {
 func TVShowAiringTodayKey(page int) string {
 	return fmt.Sprintf("tvshow:airingtoday:%d", page)
 }
-func TVShowByCompanyIDKey(companyID int64, page int) string {
-	return fmt.Sprintf("tvshow:by_company_id:%d:%d", companyID, page)
+func TVShowByCompanyIDKey(companyTMDBID int64, page int) string {
+	return fmt.Sprintf("tvshow:by_company_id:%d:%d", companyTMDBID, page)
 }
 func TVShowDetailKey(tmdbID int64) string {
 	return fmt.Sprintf("tvshow:detail:tmdb:%d", tmdbID)
@@ -70,8 +70,8 @@ func UserTVShowsTemplate(userID int64, status string) string {
 func TVShowUserDetailKey(userID, tmdbID int64) string {
 	return fmt.Sprintf("user:%d:tvshowdetail:tmdb:%d", userID, tmdbID)
 }
-func TVShowSeasonEpisodesKey(tvShowID int64, seasonNumber int, page int) string {
-	return fmt.Sprintf("tvshow:%d:season:%d:episodes:%d", tvShowID, seasonNumber, page)
+func TVShowSeasonEpisodesKey(tvShowTMDBID int64, seasonNumber int, page int) string {
+	return fmt.Sprintf("tvshow:%d:season:%d:episodes:%d", tvShowTMDBID, seasonNumber, page)
 }
 
 func UserMediaListKey(userID int64, status string, mediaType string, page, perPage int) string {
@@ -81,14 +81,14 @@ func UserMediaListTemplate(userID int64, status string, mediaType string) string
 	return fmt.Sprintf("media:%s:%s:user:%d:*", mediaType, status, userID)
 }
 
-func CollectionKey(id int64) string {
-	return fmt.Sprintf("collection:%d", id)
+func CollectionKey(tmdbID int64) string {
+	return fmt.Sprintf("collection:%d", tmdbID)
 }
 
 func SearchMultiKey(query string, page int) string {
 	return fmt.Sprintf("searchmulti:%s:%d", query, page)
 }
 
-func CompanyDetailsKey(id int64) string {
-	return fmt.Sprintf("company:%d", id)
+func CompanyDetailsKey(tmdbID int64) string {
+	return fmt.Sprintf("company:%d", tmdbID)
 }

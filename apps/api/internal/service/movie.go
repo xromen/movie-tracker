@@ -20,14 +20,14 @@ const (
 
 type movieRepository interface {
 	Upsert(ctx context.Context, movie *domain.Media) error
-	GetByTmdbID(ctx context.Context, tmdbID int64, mediaType domain.MediaType) (*domain.Media, error)
-	GetMediaUserStatus(ctx context.Context, mediaType domain.MediaType, userID, mediaID int64) (*domain.WatchStatus, error)
-	GetMediaUserStatuses(ctx context.Context, mediaType domain.MediaType, userID int64, mediaIDs []int64) (map[int64]domain.WatchStatus, error)
+	GetByTMDBID(ctx context.Context, tmdbID int64, mediaType domain.MediaType) (*domain.Media, error)
+	GetMediaUserStatus(ctx context.Context, mediaType domain.MediaType, userID, tmdbID int64) (*domain.WatchStatus, error)
+	GetMediaUserStatuses(ctx context.Context, mediaType domain.MediaType, userID int64, tmdbIDs []int64) (map[int64]domain.WatchStatus, error)
 }
 
 type AddToListInput struct {
 	UserID int64
-	TmdbID int64
+	TMDBID int64
 	Status domain.WatchStatus
 	Rating *int
 }
@@ -51,9 +51,9 @@ type MovieService interface {
 	GetPopular(ctx context.Context, userID *int64, page int) (*MoviePageOutput, error)
 	GetTopRated(ctx context.Context, userID *int64, page int) (*MoviePageOutput, error)
 	GetUpcoming(ctx context.Context, userID *int64, page int) (*MoviePageOutput, error)
-	GetMoviesByCompanyID(ctx context.Context, userID *int64, companyID int64, page int) (*MoviePageOutput, error)
-	GetDetails(ctx context.Context, id int64) (*domain.MovieDetail, error)
-	GetRecommendations(ctx context.Context, userID *int64, id int64, page int) (*MoviePageOutput, error)
+	GetMoviesByCompanyID(ctx context.Context, userID *int64, companyTMDBID int64, page int) (*MoviePageOutput, error)
+	GetDetails(ctx context.Context, tmdbID int64) (*domain.MovieDetail, error)
+	GetRecommendations(ctx context.Context, userID *int64, tmdbID int64, page int) (*MoviePageOutput, error)
 }
 
 type movieService struct {
@@ -276,12 +276,12 @@ func (s *movieService) GetUpcoming(ctx context.Context, userID *int64, page int)
 	return s.withWatchStatuses(ctx, output, userID), nil
 }
 
-func (s *movieService) GetMoviesByCompanyID(ctx context.Context, userID *int64, companyID int64, page int) (*MoviePageOutput, error) {
+func (s *movieService) GetMoviesByCompanyID(ctx context.Context, userID *int64, companyTMDBID int64, page int) (*MoviePageOutput, error) {
 	if page < 1 {
 		page = 1
 	}
 
-	cacheKey := cache.MovieByCompanyIDKey(companyID, page)
+	cacheKey := cache.MovieByCompanyIDKey(companyTMDBID, page)
 
 	var cacheResult MoviePageOutput
 	err := s.cache.Get(ctx, cacheKey, &cacheResult)
@@ -296,7 +296,7 @@ func (s *movieService) GetMoviesByCompanyID(ctx context.Context, userID *int64, 
 		)
 	}
 
-	result, err := s.tmdbClient.GetMoviesByCompanyID(ctx, companyID, page)
+	result, err := s.tmdbClient.GetMoviesByCompanyID(ctx, companyTMDBID, page)
 
 	if err != nil {
 		return nil, fmt.Errorf("get movies by company id: %w", err)
@@ -315,15 +315,15 @@ func (s *movieService) GetMoviesByCompanyID(ctx context.Context, userID *int64, 
 	return s.withWatchStatuses(ctx, output, userID), nil
 }
 
-func (s *movieService) GetDetails(ctx context.Context, id int64) (*domain.MovieDetail, error) {
-	cacheKey := cache.MovieDetailKey(id)
+func (s *movieService) GetDetails(ctx context.Context, tmdbID int64) (*domain.MovieDetail, error) {
+	cacheKey := cache.MovieDetailKey(tmdbID)
 
 	var output domain.MovieDetail
 	if err := s.cache.Get(ctx, cacheKey, &output); err == nil {
 		return &output, nil
 	}
 
-	movie, err := s.tmdbClient.GetMovieDetails(ctx, id)
+	movie, err := s.tmdbClient.GetMovieDetails(ctx, tmdbID)
 	if err != nil {
 		return nil, fmt.Errorf("get movie: %w", err)
 	}
@@ -339,15 +339,15 @@ func (s *movieService) GetDetails(ctx context.Context, id int64) (*domain.MovieD
 	return movie, nil
 }
 
-func (s *movieService) GetRecommendations(ctx context.Context, userID *int64, id int64, page int) (*MoviePageOutput, error) {
-	var cacheKey = cache.MovieRecommendationsKey(id, page)
+func (s *movieService) GetRecommendations(ctx context.Context, userID *int64, tmdbID int64, page int) (*MoviePageOutput, error) {
+	var cacheKey = cache.MovieRecommendationsKey(tmdbID, page)
 
 	var cacheResult MoviePageOutput
 	if err := s.cache.Get(ctx, cacheKey, &cacheResult); err == nil {
 		return s.withWatchStatuses(ctx, &cacheResult, userID), nil
 	}
 
-	result, err := s.tmdbClient.GetMovieRecommendations(ctx, id, page)
+	result, err := s.tmdbClient.GetMovieRecommendations(ctx, tmdbID, page)
 	if err != nil {
 		return nil, fmt.Errorf("get recommendations: %w", err)
 	}
@@ -370,19 +370,19 @@ func (s *movieService) withWatchStatuses(ctx context.Context, out *MoviePageOutp
 		return out
 	}
 
-	mediaIDs := make([]int64, 0, len(out.Movies))
+	tmdbIDs := make([]int64, 0, len(out.Movies))
 	for _, movie := range out.Movies {
-		mediaIDs = append(mediaIDs, movie.ID)
+		tmdbIDs = append(tmdbIDs, movie.TMDBID)
 	}
 
-	statuses, err := s.movieRepo.GetMediaUserStatuses(ctx, domain.MediaTypeMovie, *userID, mediaIDs)
+	statuses, err := s.movieRepo.GetMediaUserStatuses(ctx, domain.MediaTypeMovie, *userID, tmdbIDs)
 	if err != nil {
 		s.logger.Warn("failed to get movie statuses", "error", err)
 		return out
 	}
 
 	for i := range out.Movies {
-		if status, ok := statuses[out.Movies[i].ID]; ok {
+		if status, ok := statuses[out.Movies[i].TMDBID]; ok {
 			out.Movies[i].WatchStatus = status
 		}
 	}

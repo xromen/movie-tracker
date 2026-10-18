@@ -22,26 +22,26 @@ type CompanyService interface {
 }
 
 func NewCompanyService(
-	tmdbClient tmdb.Client, 
-	cache cache.Cache, 
+	tmdbClient tmdb.Client,
+	cache cache.Cache,
 	logger *slog.Logger,
 ) CompanyService {
 	return &companyService{
 		tmdbClient: tmdbClient,
-		cache: cache,
-		logger: logger,
+		cache:      cache,
+		logger:     logger,
 	}
 }
 
-func (s companyService) GetDetails(ctx context.Context, id int64) (*domain.CompanyDetails, error) {
-	cacheKey := cache.CompanyDetailsKey(id)
+func (s companyService) GetDetails(ctx context.Context, tmdbID int64) (*domain.CompanyDetails, error) {
+	cacheKey := cache.CompanyDetailsKey(tmdbID)
 
 	var output domain.CompanyDetails
 	if err := s.cache.Get(ctx, cacheKey, &output); err == nil {
 		return &output, nil
 	}
 
-	company, err := s.tmdbClient.GetCompanyDetails(ctx, id)
+	company, err := s.tmdbClient.GetCompanyDetails(ctx, tmdbID)
 	if err != nil {
 		return nil, fmt.Errorf("get company: %w", err)
 	}

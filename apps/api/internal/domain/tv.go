@@ -22,7 +22,7 @@ import (
 // }
 
 type TVShowDetail struct {
-	ID                     int64
+	TMDBID                 int64 `json:"ID"`
 	Title                  string
 	Overview               string
 	ReleaseDate            string
@@ -48,7 +48,7 @@ type TVShowDetail struct {
 }
 
 type Season struct {
-	ID           int64
+	TMDBID       int64 `json:"ID"`
 	ReleaseDate  string
 	EpisodeCount int
 	Title        string
@@ -61,14 +61,14 @@ type Season struct {
 }
 
 type Episode struct {
-	ID            int64
+	TMDBID        int64 `json:"ID"`
 	AirDate       *time.Time
 	EpisodeNumber int
 	Title         string
 	Overview      string
 	Runtime       int
 	SeasonNumber  int
-	TVShowId      int64
+	TVShowTMDBID  int64 `json:"TVShowId"`
 	StillPath     string
 	VoteAverage   float32
 	VoteCount     int64

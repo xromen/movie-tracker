@@ -30,6 +30,10 @@ Proxy записывает backend-метрики в `apps/web/src/lib/metrics/p
 
 `handler/api/watchlist.go` → `service/watchlist.go` → TMDB detail при необходимости → upsert `medias` → upsert `user_medias`. Внешний `tmdb_id` и `media_type` однозначно определяют media, но `user_medias.media_id` хранит внутренний `medias.id`.
 
+В доменной модели `Media.TMDBID` — внешний идентификатор TMDB, `Media.ID` — внутренний ключ PostgreSQL. Upsert возвращает внутренний ключ через `RETURNING id`, после чего он используется для записи `user_medias.media_id`. HTTP DTO всегда отдают TMDB ID медиа в поле `id`; поиск пользовательских статусов также выполняется по TMDB ID и типу медиа. JSON-теги доменных моделей сохраняют прежний формат Redis-кэша с внешним идентификатором в `ID`.
+
+Детали movie/TV, компании, коллекции и их части, сезоны и эпизоды хранят внешний идентификатор в `TMDBID`. Ссылки на связанные сущности называются `CollectionTMDBID` и `TVShowTMDBID`. Worker передаёт `TrackedMedia.ID` в операции по внутренним FK, а `TrackedMedia.TMDBID` — в запросы TMDB; принадлежность к коллекции сравнивается по значениям TMDB ID.
+
 ### Фоновая синхронизация
 
 `service/worker.go` запускается сразу и затем раз в 10 минут. PostgreSQL advisory lock `tmdb-schedule-sync` не даёт нескольким экземплярам выполнять цикл одновременно. Пакеты обрабатываются по 100 записей:

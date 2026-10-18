@@ -33,9 +33,9 @@ func NewCompanyHandler(companyService service.CompanyService, logger *slog.Logge
 }
 
 func (h *CompanyHandler) GetDetails(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("company_id"), 10, 64)
+	tmdbID, _ := strconv.ParseInt(c.Param("company_id"), 10, 64)
 
-	result, err := h.companyService.GetDetails(c.Request.Context(), id)
+	result, err := h.companyService.GetDetails(c.Request.Context(), tmdbID)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
@@ -48,12 +48,12 @@ func (h *CompanyHandler) GetDetails(c *gin.Context) {
 
 func toCompanyDetailsResponse(company *domain.CompanyDetails) *companyDetailsResponse {
 	return &companyDetailsResponse{
-		ID: company.ID,
-		Name: company.Name,
-		Description: company.Description,
-		LogoPath: company.LogoPath,
+		ID:            company.TMDBID,
+		Name:          company.Name,
+		Description:   company.Description,
+		LogoPath:      company.LogoPath,
 		OriginCountry: company.OriginCountry,
-		Homepage: company.Homepage,
-		Headquarters: company.Headquarters,
+		Homepage:      company.Homepage,
+		Headquarters:  company.Headquarters,
 	}
 }

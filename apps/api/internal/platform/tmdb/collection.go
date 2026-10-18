@@ -7,7 +7,7 @@ import (
 	"github.com/xromen/movietracker/internal/domain"
 )
 
-func (c *client) GetCollectionDetails(ctx context.Context, id int64) (*domain.Collection, error) {
+func (c *client) GetCollectionDetails(ctx context.Context, tmdbID int64) (*domain.Collection, error) {
 	opts := getDefaultOpts()
 
 	tmdbClient, err := c.requestClient(ctx)
@@ -15,7 +15,7 @@ func (c *client) GetCollectionDetails(ctx context.Context, id int64) (*domain.Co
 		return nil, err
 	}
 
-	result, err := tmdbClient.GetCollectionDetails(int(id), opts)
+	result, err := tmdbClient.GetCollectionDetails(int(tmdbID), opts)
 	if err != nil {
 		return nil, fmt.Errorf("get collection details: %w", err)
 	}
@@ -24,7 +24,7 @@ func (c *client) GetCollectionDetails(ctx context.Context, id int64) (*domain.Co
 
 	for _, part := range result.Parts {
 		parts = append(parts, domain.CollectionPart{
-			ID:          part.ID,
+			TMDBID:      part.ID,
 			Title:       part.Title,
 			Overview:    part.Overview,
 			ReleaseDate: part.ReleaseDate,
@@ -35,7 +35,7 @@ func (c *client) GetCollectionDetails(ctx context.Context, id int64) (*domain.Co
 	}
 
 	return &domain.Collection{
-		ID:         result.ID,
+		TMDBID:     result.ID,
 		Name:       result.Name,
 		PosterPath: c.getPosterPath(result.PosterPath),
 		Overview:   result.Overview,

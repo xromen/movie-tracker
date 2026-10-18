@@ -25,7 +25,7 @@ func (c *client) SearchMovies(ctx context.Context, query string, page int) (*Pag
 	movies := make([]domain.Media, 0, len(results.Results))
 	for _, result := range results.Results {
 		movies = append(movies, domain.Media{
-			ID:          result.ID,
+			TMDBID:      result.ID,
 			Title:       result.Title,
 			Overview:    result.Overview,
 			ReleaseDate: result.ReleaseDate,
@@ -43,7 +43,7 @@ func (c *client) SearchMovies(ctx context.Context, query string, page int) (*Pag
 	}, nil
 }
 
-func (c *client) GetMovie(ctx context.Context, tmdbId int64) (*domain.Media, error) {
+func (c *client) GetMovie(ctx context.Context, tmdbID int64) (*domain.Media, error) {
 	opts := getDefaultOpts()
 
 	tmdbClient, err := c.requestClient(ctx)
@@ -51,28 +51,28 @@ func (c *client) GetMovie(ctx context.Context, tmdbId int64) (*domain.Media, err
 		return nil, err
 	}
 
-	result, err := tmdbClient.GetMovieDetails(int(tmdbId), opts)
+	result, err := tmdbClient.GetMovieDetails(int(tmdbID), opts)
 	if err != nil {
 		return nil, fmt.Errorf("get movie: %w", err)
 	}
 
-	var collectionID *int64
+	var collectionTMDBID *int64
 	if result.BelongsToCollection.ID == 0 {
-		collectionID = nil
+		collectionTMDBID = nil
 	} else {
-		collectionID = &result.BelongsToCollection.ID
+		collectionTMDBID = &result.BelongsToCollection.ID
 	}
 
 	movie := domain.Media{
-		ID:           result.ID,
-		Title:        result.Title,
-		Overview:     result.Overview,
-		PosterPath:   c.getPosterPath(result.PosterPath),
-		ReleaseDate:  result.ReleaseDate,
-		VoteAverage:  result.VoteAverage,
-		VoteCount:    result.VoteCount,
-		Type:         domain.MediaTypeMovie,
-		CollectionID: collectionID,
+		TMDBID:           result.ID,
+		Title:            result.Title,
+		Overview:         result.Overview,
+		PosterPath:       c.getPosterPath(result.PosterPath),
+		ReleaseDate:      result.ReleaseDate,
+		VoteAverage:      result.VoteAverage,
+		VoteCount:        result.VoteCount,
+		Type:             domain.MediaTypeMovie,
+		CollectionTMDBID: collectionTMDBID,
 	}
 
 	return &movie, nil
@@ -95,7 +95,7 @@ func (c *client) GetMovieNowPlaying(ctx context.Context, page int) (*Paginated[d
 	movies := make([]domain.Media, 0, len(result.Results))
 	for _, result := range result.Results {
 		movies = append(movies, domain.Media{
-			ID:          result.ID,
+			TMDBID:      result.ID,
 			Title:       result.Title,
 			Overview:    result.Overview,
 			ReleaseDate: result.ReleaseDate,
@@ -130,7 +130,7 @@ func (c *client) GetMoviePopular(ctx context.Context, page int) (*Paginated[doma
 	movies := make([]domain.Media, 0, len(result.Results))
 	for _, result := range result.Results {
 		movies = append(movies, domain.Media{
-			ID:          result.ID,
+			TMDBID:      result.ID,
 			Title:       result.Title,
 			Overview:    result.Overview,
 			ReleaseDate: result.ReleaseDate,
@@ -165,7 +165,7 @@ func (c *client) GetMovieTopRated(ctx context.Context, page int) (*Paginated[dom
 	movies := make([]domain.Media, 0, len(result.Results))
 	for _, result := range result.Results {
 		movies = append(movies, domain.Media{
-			ID:          result.ID,
+			TMDBID:      result.ID,
 			Title:       result.Title,
 			Overview:    result.Overview,
 			ReleaseDate: result.ReleaseDate,
@@ -200,7 +200,7 @@ func (c *client) GetMovieUpcoming(ctx context.Context, page int) (*Paginated[dom
 	movies := make([]domain.Media, 0, len(result.Results))
 	for _, result := range result.Results {
 		movies = append(movies, domain.Media{
-			ID:          result.ID,
+			TMDBID:      result.ID,
 			Title:       result.Title,
 			Overview:    result.Overview,
 			ReleaseDate: result.ReleaseDate,
@@ -218,11 +218,11 @@ func (c *client) GetMovieUpcoming(ctx context.Context, page int) (*Paginated[dom
 	}, nil
 }
 
-func (c *client) GetMoviesByCompanyID(ctx context.Context, companyID int64, page int) (*Paginated[domain.Media], error) {
+func (c *client) GetMoviesByCompanyID(ctx context.Context, companyTMDBID int64, page int) (*Paginated[domain.Media], error) {
 	opts := getDefaultOpts()
 	opts["page"] = fmt.Sprintf("%d", page)
 	opts["sort_by"] = "popularity.desc"
-	opts["with_companies"] = fmt.Sprintf("%d", companyID)
+	opts["with_companies"] = fmt.Sprintf("%d", companyTMDBID)
 
 	tmdbClient, err := c.requestClient(ctx)
 	if err != nil {
@@ -237,7 +237,7 @@ func (c *client) GetMoviesByCompanyID(ctx context.Context, companyID int64, page
 	medias := make([]domain.Media, 0, len(result.Results))
 	for _, movie := range result.Results {
 		medias = append(medias, domain.Media{
-			ID:          movie.ID,
+			TMDBID:      movie.ID,
 			Title:       movie.Title,
 			Overview:    movie.Overview,
 			ReleaseDate: movie.ReleaseDate,
@@ -255,7 +255,7 @@ func (c *client) GetMoviesByCompanyID(ctx context.Context, companyID int64, page
 	}, nil
 }
 
-func (c *client) GetMovieDetails(ctx context.Context, tmdbId int64) (*domain.MovieDetail, error) {
+func (c *client) GetMovieDetails(ctx context.Context, tmdbID int64) (*domain.MovieDetail, error) {
 	opts := getDefaultOpts()
 	opts["append_to_response"] = "videos"
 
@@ -264,16 +264,16 @@ func (c *client) GetMovieDetails(ctx context.Context, tmdbId int64) (*domain.Mov
 		return nil, err
 	}
 
-	result, err := tmdbClient.GetMovieDetails(int(tmdbId), opts)
+	result, err := tmdbClient.GetMovieDetails(int(tmdbID), opts)
 	if err != nil {
 		return nil, fmt.Errorf("get movie details: %w", err)
 	}
 
-	var collectionID *int64
+	var collectionTMDBID *int64
 	if result.BelongsToCollection.ID == 0 {
-		collectionID = nil
+		collectionTMDBID = nil
 	} else {
-		collectionID = &result.BelongsToCollection.ID
+		collectionTMDBID = &result.BelongsToCollection.ID
 	}
 
 	productionCountries := make([]string, 0, len(result.ProductionCountries))
@@ -284,7 +284,7 @@ func (c *client) GetMovieDetails(ctx context.Context, tmdbId int64) (*domain.Mov
 	productionCompanies := make([]domain.ProductionCompany, 0, len(result.ProductionCompanies))
 	for _, company := range result.ProductionCompanies {
 		productionCompanies = append(productionCompanies, domain.ProductionCompany{
-			ID:            company.ID,
+			TMDBID:        company.ID,
 			LogoPath:      c.getPosterPath(company.LogoPath),
 			Name:          company.Name,
 			OriginCountry: company.OriginCountry,
@@ -292,7 +292,7 @@ func (c *client) GetMovieDetails(ctx context.Context, tmdbId int64) (*domain.Mov
 	}
 
 	return &domain.MovieDetail{
-		ID:                  result.ID,
+		TMDBID:              result.ID,
 		Title:               result.Title,
 		Overview:            result.Overview,
 		ReleaseDate:         result.ReleaseDate,
@@ -311,11 +311,11 @@ func (c *client) GetMovieDetails(ctx context.Context, tmdbId int64) (*domain.Mov
 		Runtime:             result.Runtime,
 		Budget:              result.Budget,
 		Revenue:             result.Revenue,
-		CollectionID:        collectionID,
+		CollectionTMDBID:    collectionTMDBID,
 	}, nil
 }
 
-func (c *client) GetMovieRecommendations(ctx context.Context, tmdbId int64, page int) (*Paginated[domain.Media], error) {
+func (c *client) GetMovieRecommendations(ctx context.Context, tmdbID int64, page int) (*Paginated[domain.Media], error) {
 	opts := getDefaultOpts()
 	opts["page"] = fmt.Sprintf("%d", page)
 
@@ -324,7 +324,7 @@ func (c *client) GetMovieRecommendations(ctx context.Context, tmdbId int64, page
 		return nil, err
 	}
 
-	result, err := tmdbClient.GetMovieRecommendations(int(tmdbId), opts)
+	result, err := tmdbClient.GetMovieRecommendations(int(tmdbID), opts)
 	if err != nil {
 		return nil, fmt.Errorf("get movie recommendations: %w", err)
 	}
@@ -332,7 +332,7 @@ func (c *client) GetMovieRecommendations(ctx context.Context, tmdbId int64, page
 	var movies []domain.Media
 	for _, result := range result.Results {
 		movies = append(movies, domain.Media{
-			ID:          result.ID,
+			TMDBID:      result.ID,
 			Title:       result.Title,
 			Overview:    result.Overview,
 			ReleaseDate: result.ReleaseDate,

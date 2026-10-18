@@ -20,7 +20,7 @@ import "time"
 // }
 
 type MovieDetail struct {
-	ID                  int64
+	TMDBID              int64 `json:"ID"`
 	Title               string
 	Overview            string
 	ReleaseDate         string
@@ -41,7 +41,7 @@ type MovieDetail struct {
 	Runtime             int
 	Budget              int64
 	Revenue             int64
-	CollectionID        *int64
+	CollectionTMDBID    *int64 `json:"CollectionID"`
 }
 
 type MovieRelease struct {
@@ -52,7 +52,7 @@ type MovieRelease struct {
 }
 
 type ProductionCompany struct {
-	ID            int64
+	TMDBID        int64 `json:"ID"`
 	LogoPath      string
 	Name          string
 	OriginCountry string

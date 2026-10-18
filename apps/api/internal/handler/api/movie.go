@@ -73,7 +73,7 @@ type movieDetailResponse struct {
 	Revenue             int64                       `json:"revenue"`
 	Budget              int64                       `json:"budget"`
 	Runtime             int                         `json:"runtime"`
-	CollectionID        *int64                      `json:"collection_id"`
+	CollectionTMDBID    *int64                      `json:"collection_id"`
 }
 
 type MovieHandler struct {
@@ -103,8 +103,8 @@ func (h *MovieHandler) Search(c *gin.Context) {
 
 func (h *MovieHandler) NowPlaying(c *gin.Context) {
 	var userID *int64
-	if id, exists := c.Get(ContextUserID); exists {
-		if v, ok := id.(int64); ok {
+	if rawUserID, exists := c.Get(ContextUserID); exists {
+		if v, ok := rawUserID.(int64); ok {
 			userID = &v
 		}
 	}
@@ -121,8 +121,8 @@ func (h *MovieHandler) NowPlaying(c *gin.Context) {
 
 func (h *MovieHandler) Popular(c *gin.Context) {
 	var userID *int64
-	if id, exists := c.Get(ContextUserID); exists {
-		if v, ok := id.(int64); ok {
+	if rawUserID, exists := c.Get(ContextUserID); exists {
+		if v, ok := rawUserID.(int64); ok {
 			userID = &v
 		}
 	}
@@ -139,8 +139,8 @@ func (h *MovieHandler) Popular(c *gin.Context) {
 
 func (h *MovieHandler) TopRated(c *gin.Context) {
 	var userID *int64
-	if id, exists := c.Get(ContextUserID); exists {
-		if v, ok := id.(int64); ok {
+	if rawUserID, exists := c.Get(ContextUserID); exists {
+		if v, ok := rawUserID.(int64); ok {
 			userID = &v
 		}
 	}
@@ -157,8 +157,8 @@ func (h *MovieHandler) TopRated(c *gin.Context) {
 
 func (h *MovieHandler) Upcoming(c *gin.Context) {
 	var userID *int64
-	if id, exists := c.Get(ContextUserID); exists {
-		if v, ok := id.(int64); ok {
+	if rawUserID, exists := c.Get(ContextUserID); exists {
+		if v, ok := rawUserID.(int64); ok {
 			userID = &v
 		}
 	}
@@ -175,15 +175,15 @@ func (h *MovieHandler) Upcoming(c *gin.Context) {
 
 func (h *MovieHandler) ByCompanyID(c *gin.Context) {
 	var userID *int64
-	if id, exists := c.Get(ContextUserID); exists {
-		if v, ok := id.(int64); ok {
+	if rawUserID, exists := c.Get(ContextUserID); exists {
+		if v, ok := rawUserID.(int64); ok {
 			userID = &v
 		}
 	}
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	companyID, _ := strconv.ParseInt(c.Param("company_id"), 10, 64)
+	companyTMDBID, _ := strconv.ParseInt(c.Param("company_id"), 10, 64)
 
-	result, err := h.movieService.GetMoviesByCompanyID(c.Request.Context(), userID, companyID, page)
+	result, err := h.movieService.GetMoviesByCompanyID(c.Request.Context(), userID, companyTMDBID, page)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
@@ -193,9 +193,9 @@ func (h *MovieHandler) ByCompanyID(c *gin.Context) {
 }
 
 func (h *MovieHandler) GetMovieDetail(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	tmdbID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 
-	result, err := h.movieService.GetDetails(c.Request.Context(), id)
+	result, err := h.movieService.GetDetails(c.Request.Context(), tmdbID)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
@@ -206,15 +206,15 @@ func (h *MovieHandler) GetMovieDetail(c *gin.Context) {
 
 func (h *MovieHandler) GetMovieRecommendations(c *gin.Context) {
 	var userID *int64
-	if id, exists := c.Get(ContextUserID); exists {
-		if v, ok := id.(int64); ok {
+	if rawUserID, exists := c.Get(ContextUserID); exists {
+		if v, ok := rawUserID.(int64); ok {
 			userID = &v
 		}
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	tmdbID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 
-	result, err := h.movieService.GetRecommendations(c.Request.Context(), userID, id, page)
+	result, err := h.movieService.GetRecommendations(c.Request.Context(), userID, tmdbID, page)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
@@ -237,7 +237,7 @@ func toPaginatedMovies(result *service.MoviePageOutput) searchResponse {
 
 func toMovieResponse(movie domain.Media) movieResponse {
 	return movieResponse{
-		ID:          movie.ID,
+		ID:          movie.TMDBID,
 		Title:       movie.Title,
 		Overview:    movie.Overview,
 		PosterPath:  movie.PosterPath,
@@ -250,7 +250,7 @@ func toMovieResponse(movie domain.Media) movieResponse {
 
 func toMovieDetailResponse(movie *domain.MovieDetail) movieDetailResponse {
 	return movieDetailResponse{
-		ID:                  movie.ID,
+		ID:                  movie.TMDBID,
 		Title:               movie.Title,
 		Overview:            movie.Overview,
 		ReleaseDate:         movie.ReleaseDate,
@@ -269,7 +269,7 @@ func toMovieDetailResponse(movie *domain.MovieDetail) movieDetailResponse {
 		Revenue:             movie.Revenue,
 		Budget:              movie.Budget,
 		Runtime:             movie.Runtime,
-		CollectionID:        movie.CollectionID,
+		CollectionTMDBID:    movie.CollectionTMDBID,
 	}
 }
 
@@ -288,7 +288,7 @@ func toProductionCompaniesResponse(companies []domain.ProductionCompany) []produ
 	responses := make([]productionCompanyResponse, 0, len(companies))
 	for _, company := range companies {
 		responses = append(responses, productionCompanyResponse{
-			ID:            company.ID,
+			ID:            company.TMDBID,
 			LogoPath:      company.LogoPath,
 			Name:          company.Name,
 			OriginCountry: company.OriginCountry,

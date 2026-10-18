@@ -36,7 +36,7 @@ func (c *client) SearchMulti(ctx context.Context, query string, page int) (*Pagi
 		}
 
 		medias = append(medias, domain.Media{
-			ID:          result.ID,
+			TMDBID:      result.ID,
 			Title:       title,
 			Overview:    result.Overview,
 			ReleaseDate: result.ReleaseDate,

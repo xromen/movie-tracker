@@ -10,6 +10,14 @@
 
 Публичные movie/TV/company/collection endpoints используют optional auth: без валидной access cookie ответ остаётся публичным, а с валидной cookie включает пользовательский `watch_status` там, где он предусмотрен.
 
+### Идентификаторы медиа
+
+Во всех публичных ответах API поле `id` (`ID` в Go DTO) фильма или сериала всегда содержит **TMDB ID медиа**, а не внутренний `medias.id` из PostgreSQL. Это правило действует для поиска, каталогов, деталей, рекомендаций, фильмов и сериалов компании, частей коллекций и вложенных медиа в watch list. В доменной модели `Media` поле `TMDBID` хранит внешний идентификатор, а `ID` — внутренний ключ базы. Модели деталей, коллекций, компаний, сезонов и эпизодов используют `TMDBID` без внутреннего `ID`.
+
+Параметры `{id}` movie/TV endpoints, `media_id` в query и `id` в body watch list также принимают TMDB ID. Идентификатор медиа используется вместе с `media_type`: фильм и сериал могут иметь одинаковый TMDB ID. Поля `id` сезонов и эпизодов содержат TMDB ID соответствующего сезона или эпизода, `tv_show_id` эпизода — TMDB ID сериала.
+
+`id` компании и коллекции, а также `collection_id` фильма — идентификаторы соответствующих сущностей в TMDB. В коде ссылки на коллекцию и сериал называются `CollectionTMDBID` и `TVShowTMDBID`. Идентификаторы пользователей, токенов и запросов к идентификаторам TMDB не относятся; заголовок трассировки остаётся `X-Request-ID`.
+
 ## Авторизация
 
 | Метод | Путь | Body / условие | Результат |
@@ -83,6 +91,8 @@ Season-level `PUT`/`DELETE` отвечают `204`; episode-level операци
 
 `media_type`: `movie` или `tv`. `watch_status`: `watched`, `want_to_watch` или `favorite`.
 
+В примере `id: 550` — TMDB ID фильма. Внутренний ключ `medias.id` используется только при сохранении связи `user_medias.media_id` и наружу не возвращается.
+
 ## Search, companies, collections и Telegram
 
 | Метод | Путь | Query / auth | Назначение |
@@ -107,3 +117,5 @@ Movie/TV/search endpoints возвращают `results`, `total_pages`, `total_
 ## Кэш
 
 TMDB search, catalogs, details, recommendations, seasons, companies и collections кэшируются в Redis на 24 часа. Запись выполняется в фоне с timeout 3 секунды. Redis можно отключить: реализация превращается в no-op cache. Ключи централизованы в `internal/platform/cache/keys.go`.
+
+JSON-представление доменных TMDB ID в кэше сохраняет прежние имена `ID`, `TVShowId` и `CollectionID`; внутренний ID базы не сериализуется. Поэтому записи кэша, созданные до разделения `ID` и `TMDBID`, продолжают читаться без сброса Redis.

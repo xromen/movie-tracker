@@ -28,7 +28,7 @@ func (c *client) SearchTVShows(ctx context.Context, query string, page int) (*Pa
 	tvShows := make([]domain.Media, 0, len(results.Results))
 	for _, result := range results.Results {
 		tvShows = append(tvShows, domain.Media{
-			ID:          result.ID,
+			TMDBID:      result.ID,
 			Title:       result.Name,
 			Overview:    result.Overview,
 			ReleaseDate: result.FirstAirDate,
@@ -46,7 +46,7 @@ func (c *client) SearchTVShows(ctx context.Context, query string, page int) (*Pa
 	}, nil
 }
 
-func (c *client) GetTVShow(ctx context.Context, tmdbId int64) (*domain.Media, error) {
+func (c *client) GetTVShow(ctx context.Context, tmdbID int64) (*domain.Media, error) {
 	opts := getDefaultOpts()
 
 	tmdbClient, err := c.requestClient(ctx)
@@ -54,13 +54,13 @@ func (c *client) GetTVShow(ctx context.Context, tmdbId int64) (*domain.Media, er
 		return nil, err
 	}
 
-	result, err := tmdbClient.GetTVDetails(int(tmdbId), opts)
+	result, err := tmdbClient.GetTVDetails(int(tmdbID), opts)
 	if err != nil {
 		return nil, fmt.Errorf("get tv show: %w", err)
 	}
 
 	tv := domain.Media{
-		ID:          result.ID,
+		TMDBID:      result.ID,
 		Title:       result.Name,
 		Overview:    result.Overview,
 		PosterPath:  c.getPosterPath(result.PosterPath),
@@ -90,7 +90,7 @@ func (c *client) GetTVShowAiringToday(ctx context.Context, page int) (*Paginated
 	tvs := make([]domain.Media, 0, len(result.Results))
 	for _, result := range result.Results {
 		tvs = append(tvs, domain.Media{
-			ID:          result.ID,
+			TMDBID:      result.ID,
 			Title:       result.Name,
 			Overview:    result.Overview,
 			ReleaseDate: result.FirstAirDate,
@@ -125,7 +125,7 @@ func (c *client) GetTVShowOnTheAir(ctx context.Context, page int) (*Paginated[do
 	tvs := make([]domain.Media, 0, len(result.Results))
 	for _, result := range result.Results {
 		tvs = append(tvs, domain.Media{
-			ID:          result.ID,
+			TMDBID:      result.ID,
 			Title:       result.Name,
 			Overview:    result.Overview,
 			ReleaseDate: result.FirstAirDate,
@@ -160,7 +160,7 @@ func (c *client) GetTVShowTopRated(ctx context.Context, page int) (*Paginated[do
 	tvs := make([]domain.Media, 0, len(result.Results))
 	for _, result := range result.Results {
 		tvs = append(tvs, domain.Media{
-			ID:          result.ID,
+			TMDBID:      result.ID,
 			Title:       result.Name,
 			Overview:    result.Overview,
 			ReleaseDate: result.FirstAirDate,
@@ -195,7 +195,7 @@ func (c *client) GetTVShowPopular(ctx context.Context, page int) (*Paginated[dom
 	tvs := make([]domain.Media, 0, len(result.Results))
 	for _, result := range result.Results {
 		tvs = append(tvs, domain.Media{
-			ID:          result.ID,
+			TMDBID:      result.ID,
 			Title:       result.Name,
 			Overview:    result.Overview,
 			ReleaseDate: result.FirstAirDate,
@@ -213,11 +213,11 @@ func (c *client) GetTVShowPopular(ctx context.Context, page int) (*Paginated[dom
 	}, nil
 }
 
-func (c *client) GetTVShowsByCompanyID(ctx context.Context, companyID int64, page int) (*Paginated[domain.Media], error) {
+func (c *client) GetTVShowsByCompanyID(ctx context.Context, companyTMDBID int64, page int) (*Paginated[domain.Media], error) {
 	opts := getDefaultOpts()
 	opts["page"] = fmt.Sprintf("%d", page)
 	opts["sort_by"] = "popularity.desc"
-	opts["with_companies"] = fmt.Sprintf("%d", companyID)
+	opts["with_companies"] = fmt.Sprintf("%d", companyTMDBID)
 
 	tmdbClient, err := c.requestClient(ctx)
 	if err != nil {
@@ -232,7 +232,7 @@ func (c *client) GetTVShowsByCompanyID(ctx context.Context, companyID int64, pag
 	medias := make([]domain.Media, 0, len(result.Results))
 	for _, tvShow := range result.Results {
 		medias = append(medias, domain.Media{
-			ID:          tvShow.ID,
+			TMDBID:      tvShow.ID,
 			Title:       tvShow.Name,
 			Overview:    tvShow.Overview,
 			ReleaseDate: tvShow.FirstAirDate,
@@ -250,7 +250,7 @@ func (c *client) GetTVShowsByCompanyID(ctx context.Context, companyID int64, pag
 	}, nil
 }
 
-func (c *client) GetTVShowDetails(ctx context.Context, tmdbId int64) (*domain.TVShowDetail, error) {
+func (c *client) GetTVShowDetails(ctx context.Context, tmdbID int64) (*domain.TVShowDetail, error) {
 	opts := getDefaultOpts()
 	opts["append_to_response"] = "videos"
 
@@ -259,7 +259,7 @@ func (c *client) GetTVShowDetails(ctx context.Context, tmdbId int64) (*domain.TV
 		return nil, err
 	}
 
-	result, err := tmdbClient.GetTVDetails(int(tmdbId), opts)
+	result, err := tmdbClient.GetTVDetails(int(tmdbID), opts)
 	if err != nil {
 		return nil, fmt.Errorf("get tv show details: %w", err)
 	}
@@ -285,7 +285,7 @@ func (c *client) GetTVShowDetails(ctx context.Context, tmdbId int64) (*domain.TV
 		// }
 
 		seasons = append(seasons, domain.Season{
-			ID:           season.ID,
+			TMDBID:       season.ID,
 			ReleaseDate:  season.AirDate,
 			EpisodeCount: season.EpisodeCount,
 			Title:        season.Name,
@@ -305,7 +305,7 @@ func (c *client) GetTVShowDetails(ctx context.Context, tmdbId int64) (*domain.TV
 	productionCompanies := make([]domain.ProductionCompany, 0, len(result.ProductionCompanies))
 	for _, company := range result.ProductionCompanies {
 		productionCompanies = append(productionCompanies, domain.ProductionCompany{
-			ID:            company.ID,
+			TMDBID:        company.ID,
 			LogoPath:      c.getPosterPath(company.LogoPath),
 			Name:          company.Name,
 			OriginCountry: company.OriginCountry,
@@ -313,7 +313,7 @@ func (c *client) GetTVShowDetails(ctx context.Context, tmdbId int64) (*domain.TV
 	}
 
 	return &domain.TVShowDetail{
-		ID:                     result.ID,
+		TMDBID:                 result.ID,
 		Title:                  result.Name,
 		Overview:               result.Overview,
 		ReleaseDate:            result.FirstAirDate,
@@ -337,7 +337,7 @@ func (c *client) GetTVShowDetails(ctx context.Context, tmdbId int64) (*domain.TV
 	}, nil
 }
 
-func (c *client) GetTVShowRecommendations(ctx context.Context, tmdbId int64, page int) (*Paginated[domain.Media], error) {
+func (c *client) GetTVShowRecommendations(ctx context.Context, tmdbID int64, page int) (*Paginated[domain.Media], error) {
 	opts := getDefaultOpts()
 	opts["page"] = fmt.Sprintf("%d", page)
 
@@ -346,7 +346,7 @@ func (c *client) GetTVShowRecommendations(ctx context.Context, tmdbId int64, pag
 		return nil, err
 	}
 
-	result, err := tmdbClient.GetTVRecommendations(int(tmdbId), opts)
+	result, err := tmdbClient.GetTVRecommendations(int(tmdbID), opts)
 	if err != nil {
 		return nil, fmt.Errorf("get tv show recommendations: %w", err)
 	}
@@ -354,7 +354,7 @@ func (c *client) GetTVShowRecommendations(ctx context.Context, tmdbId int64, pag
 	var tvs []domain.Media
 	for _, result := range result.Results {
 		tvs = append(tvs, domain.Media{
-			ID:          result.ID,
+			TMDBID:      result.ID,
 			Title:       result.Name,
 			Overview:    result.Overview,
 			ReleaseDate: result.FirstAirDate,
@@ -372,7 +372,7 @@ func (c *client) GetTVShowRecommendations(ctx context.Context, tmdbId int64, pag
 	}, nil
 }
 
-func (c *client) GetTvSeasonEpisodes(ctx context.Context, tvId int64, seasonNumber, page int) (*Paginated[domain.Episode], error) {
+func (c *client) GetTvSeasonEpisodes(ctx context.Context, tvShowTMDBID int64, seasonNumber, page int) (*Paginated[domain.Episode], error) {
 	opts := getDefaultOpts()
 	perPage := 20
 
@@ -381,7 +381,7 @@ func (c *client) GetTvSeasonEpisodes(ctx context.Context, tvId int64, seasonNumb
 		return nil, err
 	}
 
-	result, err := tmdbClient.GetTVSeasonDetails(int(tvId), seasonNumber, opts)
+	result, err := tmdbClient.GetTVSeasonDetails(int(tvShowTMDBID), seasonNumber, opts)
 	if err != nil {
 		return nil, fmt.Errorf("get tv show season episodes: %w", err)
 	}
@@ -431,14 +431,14 @@ func (c *client) GetTvSeasonEpisodes(ctx context.Context, tvId int64, seasonNumb
 		}
 
 		episodes = append(episodes, domain.Episode{
-			ID:            episode.ID,
+			TMDBID:        episode.ID,
 			AirDate:       airDate,
 			EpisodeNumber: episode.EpisodeNumber,
 			Title:         episode.Name,
 			Overview:      episode.Overview,
 			Runtime:       episode.Runtime,
 			SeasonNumber:  episode.SeasonNumber,
-			TVShowId:      episode.ShowID,
+			TVShowTMDBID:  episode.ShowID,
 			StillPath:     c.getPosterPath(episode.StillPath),
 			VoteAverage:   episode.VoteAverage,
 		})

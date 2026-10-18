@@ -42,15 +42,15 @@ func NewCollectionHandler(collectionService service.CollectionService, logger *s
 }
 
 func (h *CollectionHandler) GetDetails(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	tmdbID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	var userID *int64
-	if id, exists := c.Get(ContextUserID); exists {
-		if v, ok := id.(int64); ok {
+	if rawUserID, exists := c.Get(ContextUserID); exists {
+		if v, ok := rawUserID.(int64); ok {
 			userID = &v
 		}
 	}
 
-	result, err := h.collectionService.GetDetails(c.Request.Context(), id, userID)
+	result, err := h.collectionService.GetDetails(c.Request.Context(), tmdbID, userID)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
@@ -65,7 +65,7 @@ func toCollectionResponse(collection *domain.Collection) *collectionResponse {
 	var parts []collectionPartResponse
 	for _, part := range collection.Parts {
 		parts = append(parts, collectionPartResponse{
-			ID:          part.ID,
+			ID:          part.TMDBID,
 			Title:       part.Title,
 			Overview:    part.Overview,
 			PosterPath:  part.PosterPath,
@@ -76,7 +76,7 @@ func toCollectionResponse(collection *domain.Collection) *collectionResponse {
 		})
 	}
 	return &collectionResponse{
-		ID:         collection.ID,
+		ID:         collection.TMDBID,
 		Name:       collection.Name,
 		Overview:   collection.Overview,
 		PosterPath: collection.PosterPath,

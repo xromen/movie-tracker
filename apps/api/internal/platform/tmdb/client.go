@@ -30,30 +30,30 @@ type Paginated[T any] struct {
 type Client interface {
 	//Movies
 	SearchMovies(ctx context.Context, query string, page int) (*Paginated[domain.Media], error)
-	GetMovie(ctx context.Context, tmdbId int64) (*domain.Media, error)
+	GetMovie(ctx context.Context, tmdbID int64) (*domain.Media, error)
 	GetMovieNowPlaying(ctx context.Context, page int) (*Paginated[domain.Media], error)
 	GetMoviePopular(ctx context.Context, page int) (*Paginated[domain.Media], error)
 	GetMovieTopRated(ctx context.Context, page int) (*Paginated[domain.Media], error)
 	GetMovieUpcoming(ctx context.Context, page int) (*Paginated[domain.Media], error)
-	GetMovieDetails(ctx context.Context, tmdbId int64) (*domain.MovieDetail, error)
-	GetMovieRecommendations(ctx context.Context, tmdbId int64, page int) (*Paginated[domain.Media], error)
+	GetMovieDetails(ctx context.Context, tmdbID int64) (*domain.MovieDetail, error)
+	GetMovieRecommendations(ctx context.Context, tmdbID int64, page int) (*Paginated[domain.Media], error)
 	GetMovieReleases(ctx context.Context, tmdbID int64, region string) ([]domain.MovieRelease, error)
-	GetMoviesByCompanyID(ctx context.Context, companyID int64, page int) (*Paginated[domain.Media], error)
+	GetMoviesByCompanyID(ctx context.Context, companyTMDBID int64, page int) (*Paginated[domain.Media], error)
 
 	//Collection
-	GetCollectionDetails(ctx context.Context, id int64) (*domain.Collection, error)
+	GetCollectionDetails(ctx context.Context, tmdbID int64) (*domain.Collection, error)
 
 	//TVShows
 	SearchTVShows(ctx context.Context, query string, page int) (*Paginated[domain.Media], error)
-	GetTVShow(ctx context.Context, tmdbId int64) (*domain.Media, error)
+	GetTVShow(ctx context.Context, tmdbID int64) (*domain.Media, error)
 	GetTVShowAiringToday(ctx context.Context, page int) (*Paginated[domain.Media], error)
 	GetTVShowOnTheAir(ctx context.Context, page int) (*Paginated[domain.Media], error)
 	GetTVShowPopular(ctx context.Context, page int) (*Paginated[domain.Media], error)
 	GetTVShowTopRated(ctx context.Context, page int) (*Paginated[domain.Media], error)
-	GetTVShowsByCompanyID(ctx context.Context, companyID int64, page int) (*Paginated[domain.Media], error)
-	GetTVShowDetails(ctx context.Context, tmdbId int64) (*domain.TVShowDetail, error)
-	GetTVShowRecommendations(ctx context.Context, tmdbId int64, page int) (*Paginated[domain.Media], error)
-	GetTvSeasonEpisodes(ctx context.Context, tvId int64, seasonNumber int, page int) (*Paginated[domain.Episode], error)
+	GetTVShowsByCompanyID(ctx context.Context, companyTMDBID int64, page int) (*Paginated[domain.Media], error)
+	GetTVShowDetails(ctx context.Context, tmdbID int64) (*domain.TVShowDetail, error)
+	GetTVShowRecommendations(ctx context.Context, tmdbID int64, page int) (*Paginated[domain.Media], error)
+	GetTvSeasonEpisodes(ctx context.Context, tvShowTMDBID int64, seasonNumber int, page int) (*Paginated[domain.Episode], error)
 	GetTVSchedule(ctx context.Context, tmdbID int64) (*domain.TVSchedule, error)
 
 	//Search

@@ -1,7 +1,7 @@
 package domain
 
 type CompanyDetails struct {
-	ID            int64
+	TMDBID        int64 `json:"ID"`
 	Name          string
 	Description   string
 	LogoPath      string

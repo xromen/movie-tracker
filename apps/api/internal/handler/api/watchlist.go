@@ -91,10 +91,10 @@ func (h *WatchListHandler) GetUserWatchList(c *gin.Context) {
 
 func (h *WatchListHandler) DeleteUserStatus(c *gin.Context) {
 	userID, _ := c.Get(ContextUserID)
-	mediaID, _ := strconv.ParseInt(c.Query("media_id"), 10, 64)
+	tmdbID, _ := strconv.ParseInt(c.Query("media_id"), 10, 64)
 	mediaType := domain.MediaType(c.Query("media_type"))
 
-	result, err := h.watchListService.DeleteMediaUserStatus(c.Request.Context(), mediaType, userID.(int64), mediaID)
+	result, err := h.watchListService.DeleteMediaUserStatus(c.Request.Context(), mediaType, userID.(int64), tmdbID)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
@@ -105,10 +105,10 @@ func (h *WatchListHandler) DeleteUserStatus(c *gin.Context) {
 
 func (h *WatchListHandler) GetMediaUserStatus(c *gin.Context) {
 	userID, _ := c.Get(ContextUserID)
-	mediaID, _ := strconv.ParseInt(c.Query("media_id"), 10, 64)
+	tmdbID, _ := strconv.ParseInt(c.Query("media_id"), 10, 64)
 	mediaType := domain.MediaType(c.Query("media_type"))
 
-	status, err := h.watchListService.GetMediaUserStatus(c.Request.Context(), mediaType, userID.(int64), mediaID)
+	status, err := h.watchListService.GetMediaUserStatus(c.Request.Context(), mediaType, userID.(int64), tmdbID)
 	if err != nil {
 		handleServiceError(c, err, h.logger)
 		return
@@ -138,7 +138,7 @@ func (h *WatchListHandler) SetStatus(c *gin.Context) {
 		UserID:    userID.(int64),
 		Status:    domain.WatchStatus(req.WatchStatus),
 		MediaType: domain.MediaType(req.MediaType),
-		MediaID:   req.ID,
+		TMDBID:    req.ID,
 	})
 
 	if err != nil {
@@ -168,7 +168,7 @@ func toUserMediaResponse(media domain.UserMedia) userMediaResponse {
 
 func toMediaResponse(media *domain.Media) *mediaResponse {
 	return &mediaResponse{
-		ID:          media.ID,
+		ID:          media.TMDBID,
 		Title:       media.Title,
 		Overview:    media.Overview,
 		PosterPath:  media.PosterPath,

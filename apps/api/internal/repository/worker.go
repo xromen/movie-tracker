@@ -28,15 +28,15 @@ type WorkerRepository interface {
 		episodes []domain.Episode,
 	) error
 
-	UpdateMovieCollectionID(ctx context.Context, movieID int64, collectionID *int64) error
+	UpdateMovieCollectionID(ctx context.Context, movieID int64, collectionTMDBID *int64) error
 
 	UpsertCollection(ctx context.Context, collection domain.Collection) error
 
 	MarkMediaSuccess(ctx context.Context, mediaID int64, nextSync time.Time) error
 	MarkMediaFailure(ctx context.Context, mediaID int64, nextRetry time.Time, message string) error
 
-	MarkCollectionSuccess(ctx context.Context, collectionID int64, nextSync time.Time) error
-	MarkCollectionFailure(ctx context.Context, collectionID int64, nextRetry time.Time, message string) error
+	MarkCollectionSuccess(ctx context.Context, collectionTMDBID int64, nextSync time.Time) error
+	MarkCollectionFailure(ctx context.Context, collectionTMDBID int64, nextRetry time.Time, message string) error
 
 	GetMoviesForReport(ctx context.Context, userID int64, from, to time.Time) ([]domain.ReportMovie, error)
 	GetTvEpisodesForReport(ctx context.Context, userID int64, from, to time.Time) ([]domain.ReportTvEpisode, error)
@@ -76,14 +76,14 @@ func (r *workerRepository) CollectionListDue(ctx context.Context, limit int) ([]
 	var result []int64
 
 	for rows.Next() {
-		var collectionID int64
+		var collectionTMDBID int64
 		var nextScheduleSyncAt *time.Time
 
-		if err := rows.Scan(&collectionID, &nextScheduleSyncAt); err != nil {
+		if err := rows.Scan(&collectionTMDBID, &nextScheduleSyncAt); err != nil {
 			return nil, fmt.Errorf("scan collection id: %w", err)
 		}
 
-		result = append(result, collectionID)
+		result = append(result, collectionTMDBID)
 	}
 
 	return result, rows.Err()
@@ -125,7 +125,7 @@ func (r *workerRepository) ListDue(ctx context.Context, limit int) ([]domain.Tra
 		var media domain.TrackedMedia
 		var nextScheduleSyncAt *time.Time
 
-		if err := rows.Scan(&media.ID, &media.TMDBID, &media.Type, &media.CollectionID, &nextScheduleSyncAt); err != nil {
+		if err := rows.Scan(&media.ID, &media.TMDBID, &media.Type, &media.CollectionTMDBID, &nextScheduleSyncAt); err != nil {
 			return nil, fmt.Errorf("scan due media: %w", err)
 		}
 
@@ -256,7 +256,7 @@ func (r *workerRepository) ReplaceSeasonEpisodes(ctx context.Context, mediaID in
 			)
 			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
 		`,
-			episode.ID,
+			episode.TMDBID,
 			mediaID,
 			episode.SeasonNumber,
 			episode.EpisodeNumber,
@@ -290,7 +290,10 @@ func (r *workerRepository) UpsertCollection(ctx context.Context, collection doma
 		VALUES ($1, $2)
 		ON CONFLICT(tmdb_id) DO UPDATE SET
 							 name = EXCLUDED.name;
-	`, collection.ID, collection.Name)
+	`, collection.TMDBID, collection.Name)
+	if err != nil {
+		return fmt.Errorf("upsert collection %d: %w", collection.TMDBID, err)
+	}
 
 	for _, part := range collection.Parts {
 		_, err := tx.Exec(ctx, `
@@ -303,18 +306,18 @@ func (r *workerRepository) UpsertCollection(ctx context.Context, collection doma
 											 collection_tmdb_id = EXCLUDED.collection_tmdb_id,
 											 updated_at = NOW();
 		`,
-			part.ID,
+			part.TMDBID,
 			part.Title,
 			part.Overview,
 			part.PosterPath,
 			part.ReleaseDate,
 			part.VoteAverage,
 			part.MediaType,
-			collection.ID,
+			collection.TMDBID,
 		)
 
 		if err != nil {
-			return fmt.Errorf("upsert collection insert collection %d: %w", collection.ID, err)
+			return fmt.Errorf("upsert collection insert collection %d: %w", collection.TMDBID, err)
 		}
 	}
 
@@ -325,12 +328,12 @@ func (r *workerRepository) UpsertCollection(ctx context.Context, collection doma
 	return nil
 }
 
-func (r *workerRepository) UpdateMovieCollectionID(ctx context.Context, mediaID int64, collectionID *int64) error {
+func (r *workerRepository) UpdateMovieCollectionID(ctx context.Context, mediaID int64, collectionTMDBID *int64) error {
 	_, err := r.pool.Exec(ctx, `
 		UPDATE medias
 		SET collection_tmdb_id = $2
 		WHERE id = $1;
-	`, mediaID, collectionID)
+	`, mediaID, collectionTMDBID)
 
 	return err
 }
@@ -358,25 +361,25 @@ func (r *workerRepository) MarkMediaFailure(ctx context.Context, mediaID int64, 
 	return err
 }
 
-func (r *workerRepository) MarkCollectionSuccess(ctx context.Context, collectionID int64, nextSync time.Time) error {
+func (r *workerRepository) MarkCollectionSuccess(ctx context.Context, collectionTMDBID int64, nextSync time.Time) error {
 	_, err := r.pool.Exec(ctx, `
 		UPDATE movie_collections
 		SET schedule_synced_at = NOW(),
 		    next_schedule_sync_at = $2,
 		    schedule_sync_error = NULL
 		WHERE tmdb_id = $1;
-	`, collectionID, nextSync)
+	`, collectionTMDBID, nextSync)
 
 	return err
 }
 
-func (r *workerRepository) MarkCollectionFailure(ctx context.Context, collectionID int64, nextRetry time.Time, message string) error {
+func (r *workerRepository) MarkCollectionFailure(ctx context.Context, collectionTMDBID int64, nextRetry time.Time, message string) error {
 	_, err := r.pool.Exec(ctx, `
 		UPDATE movie_collections
 		SET next_schedule_sync_at = $2,
 		    schedule_sync_error = $3
 		WHERE tmdb_id = $1;
-	`, collectionID, nextRetry, message)
+	`, collectionTMDBID, nextRetry, message)
 
 	return err
 }

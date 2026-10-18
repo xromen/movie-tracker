@@ -12,16 +12,16 @@ import (
 
 type MediaRepository interface {
 	Upsert(ctx context.Context, media *domain.Media) error
-	GetByTmdbID(ctx context.Context, tmdbID int64, mediaType domain.MediaType) (*domain.Media, error)
+	GetByTMDBID(ctx context.Context, tmdbID int64, mediaType domain.MediaType) (*domain.Media, error)
 	GetUserList(ctx context.Context, userID int64, status domain.WatchStatus, mediaType domain.MediaType, page, perPage int) ([]domain.UserMedia, int, error)
-	GetMediaUserStatus(ctx context.Context, mediaType domain.MediaType, userID, mediaID int64) (*domain.WatchStatus, error)
-	GetMediaUserStatuses(ctx context.Context, mediaType domain.MediaType, userID int64, mediaIDs []int64) (map[int64]domain.WatchStatus, error)
-	DeleteUserStatus(ctx context.Context, mediaType domain.MediaType, userID, mediaID int64) (*domain.UserMedia, error)
+	GetMediaUserStatus(ctx context.Context, mediaType domain.MediaType, userID, tmdbID int64) (*domain.WatchStatus, error)
+	GetMediaUserStatuses(ctx context.Context, mediaType domain.MediaType, userID int64, tmdbIDs []int64) (map[int64]domain.WatchStatus, error)
+	DeleteUserStatus(ctx context.Context, mediaType domain.MediaType, userID, tmdbID int64) (*domain.UserMedia, error)
 	SetMediaUserStatus(ctx context.Context, userID int64, media *domain.UserMedia) error
-	GetWatchedEpisodeNumbers(ctx context.Context, userID, tvShowID int64, seasonNumber int) ([]int, error)
-	SetEpisodeWatched(ctx context.Context, userID, tvShowID int64, seasonNumber, episodeNumber int, watched bool) error
-	MarkSeasonWatched(ctx context.Context, userID, tvShowID int64, seasonNumber int, episodeNumbers []int32) error
-	UnmarkSeasonWatched(ctx context.Context, userID, tvShowID int64, seasonNumber int) error
+	GetWatchedEpisodeNumbers(ctx context.Context, userID, tvShowTMDBID int64, seasonNumber int) ([]int, error)
+	SetEpisodeWatched(ctx context.Context, userID, tvShowTMDBID int64, seasonNumber, episodeNumber int, watched bool) error
+	MarkSeasonWatched(ctx context.Context, userID, tvShowTMDBID int64, seasonNumber int, episodeNumbers []int32) error
+	UnmarkSeasonWatched(ctx context.Context, userID, tvShowTMDBID int64, seasonNumber int) error
 }
 
 type mediaRepository struct {
@@ -39,12 +39,12 @@ func (r *mediaRepository) Upsert(ctx context.Context, media *domain.Media) error
 	}
 	defer tx.Rollback(ctx)
 
-	if media.CollectionID != nil {
+	if media.CollectionTMDBID != nil {
 		_, err = tx.Exec(ctx, `
 			INSERT INTO movie_collections(tmdb_id)
 			VALUES ($1)
 			ON CONFLICT DO NOTHING;
-		`, media.CollectionID)
+		`, media.CollectionTMDBID)
 
 		if err != nil {
 			return fmt.Errorf("upsert media insert collection: %w", err)
@@ -60,18 +60,19 @@ func (r *mediaRepository) Upsert(ctx context.Context, media *domain.Media) error
 										 poster_path = EXCLUDED.poster_path,
 										 collection_tmdb_id = EXCLUDED.collection_tmdb_id,
 										 updated_at = NOW()
+		RETURNING id
 	`
 
-	_, err = tx.Exec(ctx, query,
-		media.ID,
+	err = tx.QueryRow(ctx, query,
+		media.TMDBID,
 		media.Title,
 		media.Overview,
 		media.PosterPath,
 		media.ReleaseDate,
 		media.Type,
 		media.VoteAverage,
-		media.CollectionID,
-	)
+		media.CollectionTMDBID,
+	).Scan(&media.ID)
 
 	if err != nil {
 		return fmt.Errorf("upsert media: %w", err)
@@ -84,9 +85,9 @@ func (r *mediaRepository) Upsert(ctx context.Context, media *domain.Media) error
 	return nil
 }
 
-func (r *mediaRepository) GetByTmdbID(ctx context.Context, tmdbID int64, mediaType domain.MediaType) (*domain.Media, error) {
+func (r *mediaRepository) GetByTMDBID(ctx context.Context, tmdbID int64, mediaType domain.MediaType) (*domain.Media, error) {
 	query := `
-		SELECT tmdb_id, title, overview, poster_path, release_date, media_type
+		SELECT id, tmdb_id, title, overview, poster_path, release_date, media_type
 		FROM medias 
 		WHERE tmdb_id = $1
 		  AND media_type = $2
@@ -94,7 +95,7 @@ func (r *mediaRepository) GetByTmdbID(ctx context.Context, tmdbID int64, mediaTy
 
 	media := &domain.Media{}
 	err := r.pool.QueryRow(ctx, query, tmdbID, mediaType).Scan(
-		&media.ID, &media.Title, &media.Overview, &media.PosterPath,
+		&media.ID, &media.TMDBID, &media.Title, &media.Overview, &media.PosterPath,
 		&media.ReleaseDate, &media.Type)
 
 	if err != nil {
@@ -110,13 +111,7 @@ func (r *mediaRepository) GetByTmdbID(ctx context.Context, tmdbID int64, mediaTy
 func (r *mediaRepository) SetMediaUserStatus(ctx context.Context, userID int64, um *domain.UserMedia) error {
 	query := `
 		INSERT INTO user_medias (user_id, media_id, status, rating)
-		SELECT
-			$1,
-			m.id,
-			$3,
-			$4
-		FROM medias m
-		WHERE m.tmdb_id = $2
+		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (user_id, media_id) DO UPDATE SET status     = EXCLUDED.status,
 													  rating     = EXCLUDED.rating,
 													  watched_at = EXCLUDED.watched_at,
@@ -175,7 +170,7 @@ func (r *mediaRepository) GetUserList(
 	query := `
 		SELECT
 			um.status, um.rating,
-			m.tmdb_id, m.title, m.overview, m.poster_path, m.release_date, m.media_type, m.vote_average
+			m.id, m.tmdb_id, m.title, m.overview, m.poster_path, m.release_date, m.media_type, m.vote_average
 		FROM user_medias um
 			JOIN medias m ON m.id = um.media_id
 			LEFT JOIN LATERAL (SELECT *
@@ -203,7 +198,7 @@ func (r *mediaRepository) GetUserList(
 
 		err := rows.Scan(
 			&um.Status, &um.Rating,
-			&m.ID, &m.Title, &m.Overview, &m.PosterPath, &m.ReleaseDate, &m.Type, &m.VoteAverage,
+			&m.ID, &m.TMDBID, &m.Title, &m.Overview, &m.PosterPath, &m.ReleaseDate, &m.Type, &m.VoteAverage,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scan user media: %w", err)
@@ -220,7 +215,7 @@ func (r *mediaRepository) GetUserList(
 	return userMedias, total, nil
 }
 
-func (r *mediaRepository) GetMediaUserStatus(ctx context.Context, mediaType domain.MediaType, userID, mediaID int64) (*domain.WatchStatus, error) {
+func (r *mediaRepository) GetMediaUserStatus(ctx context.Context, mediaType domain.MediaType, userID, tmdbID int64) (*domain.WatchStatus, error) {
 	query := `
 		SELECT status
 		FROM user_medias um
@@ -229,7 +224,7 @@ func (r *mediaRepository) GetMediaUserStatus(ctx context.Context, mediaType doma
 	`
 
 	var status string
-	err := r.pool.QueryRow(ctx, query, userID, mediaID, mediaType).Scan(&status)
+	err := r.pool.QueryRow(ctx, query, userID, tmdbID, mediaType).Scan(&status)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("get user status for media: %w", domain.ErrNotFound)
@@ -245,7 +240,7 @@ func (r *mediaRepository) GetMediaUserStatus(ctx context.Context, mediaType doma
 	return &watchStatus, nil
 }
 
-func (r *mediaRepository) GetMediaUserStatuses(ctx context.Context, mediaType domain.MediaType, userID int64, mediaIDs []int64) (map[int64]domain.WatchStatus, error) {
+func (r *mediaRepository) GetMediaUserStatuses(ctx context.Context, mediaType domain.MediaType, userID int64, tmdbIDs []int64) (map[int64]domain.WatchStatus, error) {
 	query := `
 		SELECT tmdb_id, status
 		FROM user_medias um
@@ -255,7 +250,7 @@ func (r *mediaRepository) GetMediaUserStatuses(ctx context.Context, mediaType do
 		  AND m.media_type = $3
 	`
 
-	rows, err := r.pool.Query(ctx, query, userID, mediaIDs, mediaType)
+	rows, err := r.pool.Query(ctx, query, userID, tmdbIDs, mediaType)
 	if err != nil {
 		return nil, fmt.Errorf("get user media statuses: %w", err)
 	}
@@ -265,15 +260,15 @@ func (r *mediaRepository) GetMediaUserStatuses(ctx context.Context, mediaType do
 	var statuses = map[int64]domain.WatchStatus{}
 
 	for rows.Next() {
-		var mediaID int64
+		var tmdbID int64
 		var status string
 
-		err := rows.Scan(&mediaID, &status)
+		err := rows.Scan(&tmdbID, &status)
 		if err != nil {
 			return nil, fmt.Errorf("scan user media statuses: %w", err)
 		}
 
-		statuses[mediaID] = domain.WatchStatus(status)
+		statuses[tmdbID] = domain.WatchStatus(status)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -283,7 +278,7 @@ func (r *mediaRepository) GetMediaUserStatuses(ctx context.Context, mediaType do
 	return statuses, nil
 }
 
-func (r *mediaRepository) DeleteUserStatus(ctx context.Context, mediaType domain.MediaType, userID, mediaID int64) (*domain.UserMedia, error) {
+func (r *mediaRepository) DeleteUserStatus(ctx context.Context, mediaType domain.MediaType, userID, tmdbID int64) (*domain.UserMedia, error) {
 	query := `
 		WITH deleted_rows AS (
 		DELETE FROM user_medias um
@@ -292,6 +287,7 @@ func (r *mediaRepository) DeleteUserStatus(ctx context.Context, mediaType domain
 			RETURNING
 				um.status,
 				um.rating,
+				m.id,
 				m.tmdb_id,
 				m.title,
 				m.overview,
@@ -300,16 +296,25 @@ func (r *mediaRepository) DeleteUserStatus(ctx context.Context, mediaType domain
 				m.media_type,
 				m.vote_average)
 	SELECT
-		*
+		status,
+		rating,
+		id,
+		tmdb_id,
+		title,
+		overview,
+		poster_path,
+		release_date,
+		media_type,
+		vote_average
 	FROM deleted_rows d;
 	`
 
 	var result domain.UserMedia
 	var media domain.Media
 
-	err := r.pool.QueryRow(ctx, query, userID, mediaID, mediaType).Scan(
+	err := r.pool.QueryRow(ctx, query, userID, tmdbID, mediaType).Scan(
 		&result.Status, &result.Rating,
-		&media.ID, &media.Title, &media.Overview, &media.PosterPath, &media.ReleaseDate, &media.Type, &media.VoteAverage,
+		&media.ID, &media.TMDBID, &media.Title, &media.Overview, &media.PosterPath, &media.ReleaseDate, &media.Type, &media.VoteAverage,
 	)
 
 	result.Media = &media
@@ -324,7 +329,7 @@ func (r *mediaRepository) DeleteUserStatus(ctx context.Context, mediaType domain
 	return &result, nil
 }
 
-func (r *mediaRepository) GetWatchedEpisodeNumbers(ctx context.Context, userID, tvShowID int64, seasonNumber int) ([]int, error) {
+func (r *mediaRepository) GetWatchedEpisodeNumbers(ctx context.Context, userID, tvShowTMDBID int64, seasonNumber int) ([]int, error) {
 	query := `
 		SELECT 
 			episode_number
@@ -332,7 +337,7 @@ func (r *mediaRepository) GetWatchedEpisodeNumbers(ctx context.Context, userID, 
 		WHERE user_id = $1 AND tv_show_tmdb_id = $2 AND season_number = $3
 	`
 
-	rows, err := r.pool.Query(ctx, query, userID, tvShowID, seasonNumber)
+	rows, err := r.pool.Query(ctx, query, userID, tvShowTMDBID, seasonNumber)
 	if err != nil {
 		return nil, fmt.Errorf("get watched episode numbers: %w", err)
 	}
@@ -354,7 +359,7 @@ func (r *mediaRepository) GetWatchedEpisodeNumbers(ctx context.Context, userID, 
 	return episodeNumbers, nil
 }
 
-func (r *mediaRepository) SetEpisodeWatched(ctx context.Context, userID, tvShowID int64, seasonNumber, episodeNumber int, watched bool) error {
+func (r *mediaRepository) SetEpisodeWatched(ctx context.Context, userID, tvShowTMDBID int64, seasonNumber, episodeNumber int, watched bool) error {
 	if watched {
 		query := `
 			INSERT INTO user_tv_episodes (
@@ -373,7 +378,7 @@ func (r *mediaRepository) SetEpisodeWatched(ctx context.Context, userID, tvShowI
 			ctx,
 			query,
 			userID,
-			tvShowID,
+			tvShowTMDBID,
 			seasonNumber,
 			episodeNumber,
 		)
@@ -396,7 +401,7 @@ func (r *mediaRepository) SetEpisodeWatched(ctx context.Context, userID, tvShowI
 		ctx,
 		query,
 		userID,
-		tvShowID,
+		tvShowTMDBID,
 		seasonNumber,
 		episodeNumber,
 	)
@@ -407,7 +412,7 @@ func (r *mediaRepository) SetEpisodeWatched(ctx context.Context, userID, tvShowI
 	return nil
 }
 
-func (r *mediaRepository) MarkSeasonWatched(ctx context.Context, userID, tvShowID int64, seasonNumber int, episodeNumbers []int32) error {
+func (r *mediaRepository) MarkSeasonWatched(ctx context.Context, userID, tvShowTMDBID int64, seasonNumber int, episodeNumbers []int32) error {
 	if len(episodeNumbers) == 0 {
 		return nil
 	}
@@ -431,7 +436,7 @@ func (r *mediaRepository) MarkSeasonWatched(ctx context.Context, userID, tvShowI
 		ctx,
 		query,
 		userID,
-		tvShowID,
+		tvShowTMDBID,
 		seasonNumber,
 		episodeNumbers,
 	)
@@ -442,7 +447,7 @@ func (r *mediaRepository) MarkSeasonWatched(ctx context.Context, userID, tvShowI
 	return nil
 }
 
-func (r *mediaRepository) UnmarkSeasonWatched(ctx context.Context, userID, tvShowID int64, seasonNumber int) error {
+func (r *mediaRepository) UnmarkSeasonWatched(ctx context.Context, userID, tvShowTMDBID int64, seasonNumber int) error {
 	query := `
 		DELETE FROM user_tv_episodes
 		WHERE user_id = $1
@@ -450,7 +455,7 @@ func (r *mediaRepository) UnmarkSeasonWatched(ctx context.Context, userID, tvSho
 		  AND season_number = $3
 	`
 
-	_, err := r.pool.Exec(ctx, query, userID, tvShowID, seasonNumber)
+	_, err := r.pool.Exec(ctx, query, userID, tvShowTMDBID, seasonNumber)
 	if err != nil {
 		return fmt.Errorf("unmark season watched: %w", err)
 	}

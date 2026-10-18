@@ -23,6 +23,8 @@ PostgreSQL 16 — источник постоянных данных. Мигра
 
 `medias.release_date` хранится как `VARCHAR(10)`, потому что TMDB может возвращать неполные/строковые даты. Изображения и часть внешнего payload нормализуются в service/domain, а исходные дополнительные данные могут находиться в `metadata JSONB`.
 
+`Media.ID` соответствует `medias.id`, `Media.TMDBID` — `medias.tmdb_id`, `CollectionTMDBID` — `collection_tmdb_id`. Repository возвращает оба ID при чтении media и получает внутренний ID через `INSERT ... RETURNING id` при upsert. Запись watch list использует только внутренний `user_medias.media_id`; поиск статусов использует пару `(tmdb_id, media_type)`. HTTP API возвращает TMDB ID в `id`. Разделение полей в Go не меняет схему и не требует миграции.
+
 ## История миграций
 
 | Версия | Изменение |

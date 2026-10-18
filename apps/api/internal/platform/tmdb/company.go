@@ -19,7 +19,7 @@ func (c *client) GetCompanyDetails(ctx context.Context, tmdbID int64) (*domain.C
 	}
 
 	return &domain.CompanyDetails{
-		ID:            result.ID,
+		TMDBID:        result.ID,
 		Name:          result.Name,
 		Description:   result.Description,
 		LogoPath:      c.getPosterPath(result.LogoPath),

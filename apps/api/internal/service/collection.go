@@ -13,11 +13,11 @@ import (
 )
 
 type CollectionService interface {
-	GetDetails(ctx context.Context, id int64, userID *int64) (*domain.Collection, error)
+	GetDetails(ctx context.Context, tmdbID int64, userID *int64) (*domain.Collection, error)
 }
 
 type collectionRepository interface {
-	GetMediaUserStatuses(ctx context.Context, mediaType domain.MediaType, userID int64, mediaIDs []int64) (map[int64]domain.WatchStatus, error)
+	GetMediaUserStatuses(ctx context.Context, mediaType domain.MediaType, userID int64, tmdbIDs []int64) (map[int64]domain.WatchStatus, error)
 }
 
 type collectionService struct {
@@ -40,8 +40,8 @@ func NewCollectionService(
 	}
 }
 
-func (s *collectionService) GetDetails(ctx context.Context, id int64, userID *int64) (*domain.Collection, error) {
-	cacheKey := cache.CollectionKey(id)
+func (s *collectionService) GetDetails(ctx context.Context, tmdbID int64, userID *int64) (*domain.Collection, error) {
+	cacheKey := cache.CollectionKey(tmdbID)
 
 	var cacheResult domain.Collection
 	err := s.cache.Get(ctx, cacheKey, &cacheResult)
@@ -58,7 +58,7 @@ func (s *collectionService) GetDetails(ctx context.Context, id int64, userID *in
 
 	var result *domain.Collection
 
-	result, err = s.tmdbClient.GetCollectionDetails(ctx, id)
+	result, err = s.tmdbClient.GetCollectionDetails(ctx, tmdbID)
 
 	if err != nil {
 		return nil, fmt.Errorf("collection get: %w", err)
@@ -80,19 +80,19 @@ func (s *collectionService) withWatchStatuses(ctx context.Context, out *domain.C
 		return out
 	}
 
-	mediaIDs := make([]int64, 0, len(out.Parts))
+	tmdbIDs := make([]int64, 0, len(out.Parts))
 	for _, media := range out.Parts {
-		mediaIDs = append(mediaIDs, media.ID)
+		tmdbIDs = append(tmdbIDs, media.TMDBID)
 	}
 
-	statuses, err := s.collectionRepo.GetMediaUserStatuses(ctx, domain.MediaTypeMovie, *userID, mediaIDs)
+	statuses, err := s.collectionRepo.GetMediaUserStatuses(ctx, domain.MediaTypeMovie, *userID, tmdbIDs)
 	if err != nil {
 		s.logger.Warn("failed to get movie statuses", "error", err)
 		return out
 	}
 
 	for i := range out.Parts {
-		if status, ok := statuses[out.Parts[i].ID]; ok {
+		if status, ok := statuses[out.Parts[i].TMDBID]; ok {
 			out.Parts[i].WatchStatus = status
 		}
 	}
