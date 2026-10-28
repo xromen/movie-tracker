@@ -389,6 +389,7 @@ func toTVShowDetailResponse(tvShow *domain.TVShowDetail) tvShowDetailResponse {
 		LastEpisodeReleaseDate: tvShow.LastEpisodeReleaseDate,
 		NextEpisodeReleaseDate: tvShow.NextEpisodeReleaseDate,
 		ProductionCountries:    tvShow.ProductionCountries,
+		ProductionCompanies:    toProductionCompaniesResponse(tvShow.ProductionCompanies),
 	}
 }
 
